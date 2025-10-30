@@ -10,7 +10,7 @@ namespace otp
 using namespace std::chrono_literals;
 using namespace std::chrono;
 
-void deleter(void* p)
+void deleter(void* p) noexcept
 {
     if (!p)
     {

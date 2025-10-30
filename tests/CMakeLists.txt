@@ -14,12 +14,12 @@ CPMAddPackage(
 )
 
 
-add_executable(TOTP_test TOTP_test.cpp)
-add_test(NAME TOTPTests COMMAND TOTP_test)
+add_executable(totp_test totp_test.cpp)
+add_test(NAME totpTests COMMAND totp_test)
 
-target_link_libraries(TOTP_test
+target_link_libraries(totp_test
     PRIVATE TOTP cotp Boost::ut OpenSSL::SSL OpenSSL::Crypto)
 
-target_include_directories(TOTP_test
+target_include_directories(totp_test
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../src"
 )

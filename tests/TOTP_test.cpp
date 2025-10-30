@@ -1,5 +1,5 @@
 #include <boost/ut.hpp>
-#include "TOTP.h"
+#include "totp.h"
 
 int main() {
   using namespace boost::ut;

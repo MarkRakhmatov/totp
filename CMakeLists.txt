@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(TOTP LANGUAGES CXX)
+project(TOTP LANGUAGES CXX VERSION 0.1.0)
 
 enable_testing()
 
@@ -39,26 +39,53 @@ CPMAddPackage(
 FetchContent_GetProperties(cotp SOURCE_DIR COTP_SRC)
 message(STATUS "COTP_SRC: ${COTP_SRC}")
 
-add_library(TOTP STATIC
-  src/TOTP.cpp
-  src/TOTP.h
+add_library(totp STATIC
+  src/totp.cpp
+  src/totp.h
 )
 
-target_include_directories(TOTP
-  PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src"
+target_include_directories(totp
+  INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:include>
 
   PRIVATE "${COTP_SRC}/src"
   PRIVATE "${OPENSSL_SRC}/include"
 )
 
-target_compile_definitions(TOTP PRIVATE TOTP_LIBRARY)
+target_compile_definitions(totp PRIVATE TOTP_LIBRARY)
 
 add_subdirectory(tests)
 
+set(ConfigPackageLocation lib/cmake/totp)
 
 install(
-  TARGETS TOTP
-  ARCHIVE DESTINATION lib LIBRARY DESTINATION lib
+  TARGETS totp
+  EXPORT totpTargets
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+
 )
 
-install(FILES src/TOTP.h DESTINATION include)
+install(FILES src/totp.h DESTINATION include)
+
+install(EXPORT totpTargets
+  FILE totp.cmake
+  DESTINATION lib/cmake/totp
+)
+
+include(CMakePackageConfigHelpers)
+# generate the config file that is includes the exports
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/totpConfig.cmake"
+  INSTALL_DESTINATION "lib/cmake/totp"
+  NO_SET_AND_CHECK_MACRO
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+  )
+
+# generate the version file for the config file
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/totpConfigVersion.cmake"
+  VERSION "${totp_VERSION_MAJOR}.${totp_VERSION_MINOR}"
+  COMPATIBILITY AnyNewerVersion
+)
