@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(TOTP LANGUAGES CXX VERSION 0.1.0)
+project(totp LANGUAGES CXX VERSION 0.1.0)
 
 enable_testing()
 
