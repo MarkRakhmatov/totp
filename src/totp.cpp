@@ -1,4 +1,4 @@
-#include "TOTP.h"
+#include "totp.h"
 
 #include <cotp.h>
 
