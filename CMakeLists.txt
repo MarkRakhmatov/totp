@@ -16,12 +16,6 @@ file(
 
 include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
 
-FetchContent_GetProperties(openssl BINARY_DIR OPENSSL_BUILD)
-message("OPENSSL_BUILD: ${OPENSSL_BUILD}")
-message("OPENSSL_INCLUDE_DIR: ${OPENSSL_INCLUDE_DIR}")
-
-list(APPEND CMAKE_SYSTEM_IGNORE_PREFIX_PATH  "/usr/include/openssl")
-
 CPMAddPackage(
   NAME openssl-cmake
   GITHUB_REPOSITORY "jimmy-park/openssl-cmake"
@@ -31,9 +25,12 @@ CPMAddPackage(
     "OPENSSL_CONFIGURE_VERBOSE ON"
 )
 
-# override env to avoid using of system openssl
-set(ENV{OPENSSL_INCLUDE_DIR} "${OPENSSL_INCLUDE_DIR}/include")
-set(ENV{OPENSSL_LIB_DIR} "${OPENSSL_BUILD}")
+FetchContent_GetProperties(openssl BINARY_DIR OPENSSL_BUILD)
+message("OPENSSL_BUILD: ${OPENSSL_BUILD}")
+message("OPENSSL_INCLUDE_DIR: ${OPENSSL_INCLUDE_DIR}")
+
+list(APPEND CMAKE_SYSTEM_IGNORE_PREFIX_PATH  "/usr/include/openssl")
+message("CMAKE_SYSTEM_IGNORE_PREFIX_PATH: ${CMAKE_SYSTEM_IGNORE_PREFIX_PATH}")
 
 CPMAddPackage(
   NAME cotp
