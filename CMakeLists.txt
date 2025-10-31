@@ -24,8 +24,8 @@ CPMAddPackage(
     "OPENSSL_CONFIGURE_OPTIONS no-shared\\\\;no-tests"
     "OPENSSL_CONFIGURE_VERBOSE ON"
 )
-FetchContent_GetProperties(openssl SOURCE_DIR OPENSSL_SRC)
-message("OPENSSL_SRC: ${OPENSSL_SRC}")
+FetchContent_GetProperties(openssl BINARY_DIR OPENSSL_BUILD)
+message("OPENSSL_BUILD: ${OPENSSL_BUILD}")
 
 CPMAddPackage(
   NAME cotp
@@ -50,7 +50,7 @@ target_include_directories(totp
     $<INSTALL_INTERFACE:include>
 
   PRIVATE "${COTP_SRC}/src"
-  PRIVATE "${OPENSSL_SRC}/include"
+  PRIVATE "${OPENSSL_BUILD}/include"
 )
 
 target_compile_definitions(totp PRIVATE TOTP_LIBRARY)
