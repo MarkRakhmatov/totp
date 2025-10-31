@@ -25,7 +25,7 @@ CPMAddPackage(
     "OPENSSL_CONFIGURE_VERBOSE ON"
 )
 FetchContent_GetProperties(openssl SOURCE_DIR OPENSSL_SRC)
-message(STATUS "OPENSSL_SRC: ${OPENSSL_SRC}")
+message("OPENSSL_SRC: ${OPENSSL_SRC}")
 
 CPMAddPackage(
   NAME cotp
@@ -37,7 +37,7 @@ CPMAddPackage(
 )
 
 FetchContent_GetProperties(cotp SOURCE_DIR COTP_SRC)
-message(STATUS "COTP_SRC: ${COTP_SRC}")
+message("COTP_SRC: ${COTP_SRC}")
 
 add_library(totp STATIC
   src/totp.cpp
