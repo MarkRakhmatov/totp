@@ -48,6 +48,8 @@ add_library(totp STATIC
   src/totp.cpp
   src/totp.h
 )
+# TODO exclude openssl path
+set(CMAKE_SYSTEM_IGNORE_PATH "/usr/include/openssl")
 
 target_include_directories(totp
   INTERFACE
