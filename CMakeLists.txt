@@ -46,7 +46,7 @@ CPMAddPackage(
 
 get_target_property(COTP_INCLUDE_DIRS cotp INCLUDE_DIRECTORIES)
 
-if(TARGET_INCLUDE_DIRS)
+if(COTP_INCLUDE_DIRS)
     message(STATUS "Include directories for COTP: ${COTP_INCLUDE_DIRS}")
 else()
     message(STATUS "No include directories found for COTP or target does not exist.")
