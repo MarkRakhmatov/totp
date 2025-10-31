@@ -44,6 +44,14 @@ CPMAddPackage(
     "BUILD_SHARED_LIBS OFF"
 )
 
+get_target_property(COTP_INCLUDE_DIRS cotp INCLUDE_DIRECTORIES)
+
+if(TARGET_INCLUDE_DIRS)
+    message(STATUS "Include directories for COTP: ${COTP_INCLUDE_DIRS}")
+else()
+    message(STATUS "No include directories found for COTP or target does not exist.")
+endif()
+
 FetchContent_GetProperties(cotp SOURCE_DIR COTP_SRC)
 message("COTP_SRC: ${COTP_SRC}")
 
