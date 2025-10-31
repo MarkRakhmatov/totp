@@ -44,14 +44,6 @@ CPMAddPackage(
     "BUILD_SHARED_LIBS OFF"
 )
 
-get_target_property(COTP_INCLUDE_DIRS cotp INCLUDE_DIRECTORIES)
-
-if(COTP_INCLUDE_DIRS)
-    message(STATUS "Include directories for COTP: ${COTP_INCLUDE_DIRS}")
-else()
-    message(STATUS "No include directories found for COTP or target does not exist.")
-endif()
-
 FetchContent_GetProperties(cotp SOURCE_DIR COTP_SRC)
 message("COTP_SRC: ${COTP_SRC}")
 
@@ -65,7 +57,9 @@ target_include_directories(totp
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:include>
 
-  PRIVATE "${COTP_SRC}/src"
+  PRIVATE
+    ${OPENSSL_INCLUDE_DIR}
+    "${COTP_SRC}/src"
 )
 
 target_compile_definitions(totp PRIVATE TOTP_LIBRARY)
