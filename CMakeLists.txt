@@ -53,6 +53,10 @@ target_include_directories(totp
   PRIVATE "${OPENSSL_BUILD}/include"
 )
 
+# override env to avoid using of system openssl
+set(ENV{OPENSSL_INCLUDE_DIR} "${OPENSSL_BUILD}/include")
+set(ENV{OPENSSL_LIB_DIR} "${OPENSSL_BUILD}")
+
 target_compile_definitions(totp PRIVATE TOTP_LIBRARY)
 
 add_subdirectory(tests)
