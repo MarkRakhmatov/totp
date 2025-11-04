@@ -1,100 +1,78 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.14...3.22)
 
-project(totp LANGUAGES CXX VERSION 0.1.0)
+# ---- Project ----
 
-enable_testing()
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-file(
-  DOWNLOAD
-  https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.40.8/CPM.cmake
-  ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
-  EXPECTED_HASH SHA256=78ba32abdf798bc616bab7c73aac32a17bbd7b06ad9e26a6add69de8f3ae4791
+# Note: update this to your new project's name and version
+project(
+  totp
+  VERSION 1.0
+  LANGUAGES CXX
 )
 
-include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
+# ---- Include guards ----
 
-CPMAddPackage(
-  NAME openssl-cmake
-  GITHUB_REPOSITORY "jimmy-park/openssl-cmake"
-  GIT_TAG 3.6.0
-  OPTIONS
-    "OPENSSL_CONFIGURE_OPTIONS no-shared\\\\;no-tests"
-    "OPENSSL_CONFIGURE_VERBOSE ON"
-)
-
-FetchContent_GetProperties(openssl BINARY_DIR OPENSSL_BUILD)
-message("OPENSSL_BUILD: ${OPENSSL_BUILD}")
-message("OPENSSL_INCLUDE_DIR: ${OPENSSL_INCLUDE_DIR}")
-
-list(APPEND CMAKE_SYSTEM_IGNORE_PREFIX_PATH  "/usr/include/openssl")
-message("CMAKE_SYSTEM_IGNORE_PREFIX_PATH: ${CMAKE_SYSTEM_IGNORE_PREFIX_PATH}")
-
-list(APPEND CMAKE_IGNORE_PREFIX_PATH  "/usr/include/openssl")
-message("CMAKE_IGNORE_PREFIX_PATH: ${CMAKE_IGNORE_PREFIX_PATH}")
-
-CPMAddPackage(
-  NAME cotp
-  GITHUB_REPOSITORY "paolostivanin/libcotp"
-  GIT_TAG v3.1.1
-  OPTIONS
-    "HMAC_WRAPPER openssl"
-    "BUILD_SHARED_LIBS OFF"
-)
-
-FetchContent_GetProperties(cotp SOURCE_DIR COTP_SRC)
-message("COTP_SRC: ${COTP_SRC}")
-
-add_library(totp STATIC
-  src/totp.cpp
-  src/totp.h
-)
-
-target_include_directories(totp
-  INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<INSTALL_INTERFACE:include>
-
-  PRIVATE
-    ${OPENSSL_INCLUDE_DIR}
-    "${COTP_SRC}/src"
-)
-
-target_compile_definitions(totp PRIVATE TOTP_LIBRARY)
-
-add_subdirectory(tests)
-
-set(ConfigPackageLocation lib/cmake/totp)
-
-install(
-  TARGETS totp
-  EXPORT totpTargets
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-
-)
-
-install(FILES src/totp.h DESTINATION include)
-
-install(EXPORT totpTargets
-  FILE totp.cmake
-  DESTINATION lib/cmake/totp
-)
-
-include(CMakePackageConfigHelpers)
-# generate the config file that is includes the exports
-configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
-  "${CMAKE_CURRENT_BINARY_DIR}/totpConfig.cmake"
-  INSTALL_DESTINATION "lib/cmake/totp"
-  NO_SET_AND_CHECK_MACRO
-  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
+  message(
+    FATAL_ERROR
+      "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there."
   )
+endif()
 
-# generate the version file for the config file
-write_basic_package_version_file(
-  "${CMAKE_CURRENT_BINARY_DIR}/totpConfigVersion.cmake"
-  VERSION "${totp_VERSION_MAJOR}.${totp_VERSION_MINOR}"
-  COMPATIBILITY AnyNewerVersion
+# ---- Add dependencies via CPM ----
+# see https://github.com/TheLartians/CPM.cmake for more info
+
+include(cmake/CPM.cmake)
+
+# PackageProject.cmake will be used to make our target installable
+CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
+
+CPMAddPackage(
+  NAME fmt
+  GIT_TAG 10.2.1
+  GITHUB_REPOSITORY fmtlib/fmt
+  OPTIONS "FMT_INSTALL YES" # create an installable target
+)
+
+# ---- Add source files ----
+
+# Note: globbing sources is considered bad practice as CMake's generators may not detect new files
+# automatically. Keep that in mind when changing files, or explicitly mention them here.
+file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp")
+file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+
+# ---- Create library ----
+
+# Note: for header-only libraries change all PUBLIC flags to INTERFACE and create an interface
+# target: add_library(${PROJECT_NAME} INTERFACE)
+add_library(${PROJECT_NAME} ${headers} ${sources})
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
+
+# being a cross-platform target, we enforce standards conformance on MSVC
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
+
+# Link dependencies
+target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt)
+
+target_include_directories(
+  ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+                         $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
+)
+
+# ---- Create an installable target ----
+# this allows users to install and find the library via `find_package()`.
+
+# the location where the project's version header will be placed should match the project's regular
+# header paths
+string(TOLOWER ${PROJECT_NAME}/version.h VERSION_HEADER_LOCATION)
+
+packageProject(
+  NAME ${PROJECT_NAME}
+  VERSION ${PROJECT_VERSION}
+  NAMESPACE ${PROJECT_NAME}
+  BINARY_DIR ${PROJECT_BINARY_DIR}
+  INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
+  INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
+  VERSION_HEADER "${VERSION_HEADER_LOCATION}"
+  COMPATIBILITY SameMajorVersion
+  DEPENDENCIES "fmt 10.2.1"
 )
