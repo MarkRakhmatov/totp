@@ -16,6 +16,7 @@ void deleter(void* p) noexcept
 
 totp_guard getTOTP(const std::string&)
 {
+    // TODO remove hardcoded bulllshit after dependencies fix
     auto p = new char[7];
     p[0] = '7';
     p[1] = '0';
