@@ -58,13 +58,20 @@ jobs:
         key: ${{ github.workflow }}-cpm-modules-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
 
     - name: Install format dependencies
-      run: pip3 install clang-format==14.0.6 cmake_format==0.6.11 pyyaml
+      if: ${{ matrix.cpp_compiler == 'clang++' }}
+      run: pip3 install cmake_format==0.6.11 pyyaml
+
+    - name: Check source style
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.cpp_compiler == 'clang++' }}
+      run: cmake-format --check ./CMakeLists.txt
 
     - name: Configure format
+      if: ${{ matrix.cpp_compiler == 'clang++' }}
       run: cmake -Stest -Bbuild-fmt
 
     - name: Check style
-      run: cmake --build build-fmt --target check-format
+      if: ${{ matrix.cpp_compiler == 'clang++' }}
+      run: cmake --build build-fmt --target check-clang-format --verbose
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
