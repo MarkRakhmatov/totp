@@ -61,17 +61,24 @@ jobs:
       if: ${{ matrix.cpp_compiler == 'clang++' }}
       run: pip3 install cmake_format==0.6.11 pyyaml
 
-    - name: Check source style
+    - name: Check CMake style
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.cpp_compiler == 'clang++' }}
       run: cmake-format --check ./CMakeLists.txt
 
-    - name: Configure format
-      if: ${{ matrix.cpp_compiler == 'clang++' }}
-      run: cmake -Stest -Bbuild-fmt
-
-    - name: Check style
-      if: ${{ matrix.cpp_compiler == 'clang++' }}
-      run: cmake --build build-fmt --target check-clang-format --verbose
+    - uses: DoozyX/clang-format-lint-action@v0.20
+      with:
+        source: '.'
+        exclude: './third_party ./external'
+        extensions: 'h,cpp,hpp'
+        clangFormatVersion: 19
+        inplace: True
+    - uses: EndBug/add-and-commit@v9
+      with:
+        author_name: Clang Robot
+        author_email: robot@example.com
+        message: ':art: Committing clang-format changes'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
