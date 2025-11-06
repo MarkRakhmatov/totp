@@ -66,6 +66,7 @@ jobs:
       run: cmake-format --check ./CMakeLists.txt
 
     - uses: DoozyX/clang-format-lint-action@v0.20
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.cpp_compiler == 'clang++' }}
       with:
         source: '.'
         exclude: './third_party ./external'
