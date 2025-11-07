@@ -8,7 +8,7 @@ namespace otp
 
 using totp_guard = std::unique_ptr<char, decltype(&free)>;
 
-totp_guard getTOTP(const std::string& secret);
+totp_guard getTOTP(const std::string& secret, long epochSeconds);
 
 }
 #endif // TOTP_H

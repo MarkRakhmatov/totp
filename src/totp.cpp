@@ -1,4 +1,5 @@
 #include "totp/totp.hpp"
+#include <cotp.h>
 #include <string>
 
 namespace otp
@@ -14,18 +15,16 @@ void deleter(void* p) noexcept
     return delete static_cast<char*>(p);
 }
 
-totp_guard getTOTP(const std::string&)
+totp_guard getTOTP(const std::string& secret, long epochSeconds)
 {
-    // TODO remove hardcoded bulllshit after dependencies fix
-    auto p = new char[7];
-    p[0] = '7';
-    p[1] = '0';
-    p[2] = '0';
-    p[3] = '7';
-    p[4] = '0';
-    p[5] = '9';
-    p[6] = '\0';
-    return totp_guard(p, &deleter);
+  cotp_error_t err{};
+  char* result = get_totp_at(secret.c_str(), epochSeconds, 6, 30, SHA1, &err);
+  if (err != cotp_error::NO_ERROR)
+  {
+    return totp_guard(nullptr, &deleter);
+  }
+
+  return totp_guard(result, &deleter);
 }
 
 }
