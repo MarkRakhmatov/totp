@@ -33,7 +33,6 @@ CPMAddPackage(
   OPTIONS "OPENSSL_CONFIGURE_OPTIONS no-shared\\\\;no-tests" "OPENSSL_CONFIGURE_VERBOSE ON"
 )
 
-
 # ---- Add source files ----
 
 # Note: globbing sources is considered bad practice as CMake's generators may not detect new files
