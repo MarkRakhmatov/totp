@@ -33,22 +33,6 @@ CPMAddPackage(
   OPTIONS "OPENSSL_CONFIGURE_OPTIONS no-shared\\\\;no-tests" "OPENSSL_CONFIGURE_VERBOSE ON"
 )
 
-FetchContent_GetProperties(openssl SOURCE_DIR OPENSSL_SRC)
-message(STATUS "OPENSSL_SRC: ${OPENSSL_SRC}")
-
-CPMAddPackage(
-  NAME cotp
-  GITHUB_REPOSITORY "paolostivanin/libcotp"
-  GIT_TAG v3.1.1
-  OPTIONS "HMAC_WRAPPER openssl" "BUILD_SHARED_LIBS OFF"
-  # the range-v3 CMakeLists screws with configuration options
-  DOWNLOAD_ONLY True
-)
-
-if(cotp_ADDED)
-  add_library(cotp INTERFACE IMPORTED)
-  target_include_directories(cotp INTERFACE "${cotp_SOURCE_DIR}/src")
-endif()
 
 # ---- Add source files ----
 
@@ -61,14 +45,14 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 
 # Note: for header-only libraries change all PUBLIC flags to INTERFACE and create an interface
 # target: add_library(${PROJECT_NAME} INTERFACE)
-add_library(${PROJECT_NAME} ${headers} ${sources})
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20)
+add_library(${PROJECT_NAME} STATIC ${headers} ${sources})
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 11)
 
 # being a cross-platform target, we enforce standards conformance on MSVC
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 
 # Link dependencies
-target_link_libraries(${PROJECT_NAME} PRIVATE cotp openssl)
+target_link_libraries(${PROJECT_NAME} PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
 target_include_directories(
   ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
@@ -91,5 +75,4 @@ packageProject(
   INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
   VERSION_HEADER "${VERSION_HEADER_LOCATION}"
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "cotp 3.1.1 openssl 3.6.0"
 )

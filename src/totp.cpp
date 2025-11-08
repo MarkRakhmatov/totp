@@ -1,5 +1,5 @@
 #include "totp/totp.hpp"
-#include <cotp.h>
+#include <totp/cotp.hpp>
 #include <string>
 
 namespace otp
