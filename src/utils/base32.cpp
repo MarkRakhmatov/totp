@@ -2,6 +2,10 @@
 #include <string.h>
 #include "totp/cotp.hpp"
 
+#ifdef _MSC_VER
+#define strdup _strdup
+#endif
+
 #define BITS_PER_BYTE               8
 #define BITS_PER_B32_BLOCK          5
 
@@ -35,7 +39,7 @@ base32_encode (const uint8_t *user_data,
     cotp_error_t error = check_input (user_data, data_len, MAX_ENCODE_INPUT_LEN);
     if (error == EMPTY_STRING) {
         *err_code = error;
-        return _strdup ("");
+        return strdup ("");
     }
     if (error != NO_ERROR) {
         *err_code = error;
@@ -101,14 +105,14 @@ base32_decode (const char   *user_data_untrimmed,
     cotp_error_t error = check_input ((uint8_t *)user_data_untrimmed, data_len, MAX_DECODE_BASE32_INPUT_LEN);
     if (error == EMPTY_STRING) {
         *err_code = error;
-        return (uint8_t *)_strdup ("");
+        return (uint8_t *)strdup ("");
     }
     if (error != NO_ERROR) {
         *err_code = error;
         return NULL;
     }
 
-    char *user_data = _strdup (user_data_untrimmed);
+    char *user_data = strdup (user_data_untrimmed);
     if (user_data == NULL) {
         *err_code = MEMORY_ALLOCATION_ERROR;
         return NULL;
@@ -171,7 +175,7 @@ is_string_valid_b32 (const char *user_data)
     }
 
     if (has_space (user_data)) {
-        char *trimmed = _strdup (user_data);
+        char *trimmed = strdup (user_data);
         if (trimmed == NULL) {
             return false;
         }

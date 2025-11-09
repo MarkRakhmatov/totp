@@ -6,6 +6,11 @@
 #include "totp/whmac.hpp"
 #include "totp/cotp.hpp"
 
+#ifdef _MSC_VER
+#define strdup _strdup
+#endif
+
+
 static void secure_memzero(void *p, size_t n) {
     volatile unsigned char *vp = (volatile unsigned char *)p;
     while (n--) {
@@ -273,7 +278,7 @@ get_steam_code (const unsigned char *hmac,
     }
     code[5] = '\0';
 
-    return _strdup (code);
+    return strdup (code);
 }
 
 
