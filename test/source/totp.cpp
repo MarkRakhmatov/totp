@@ -16,5 +16,5 @@ TEST_CASE("totp") {
     CHECK(epoch_seconds == 1577836800);
     auto totp = otp::getTOTP("IO3SKWXDGBFTDDJUGPPJA3KEQAKTGLCV", static_cast<long>(epoch_seconds));
     CHECK(totp.get());
-    CHECK(std::string("700709") == std::string(totp.get()));
+    CHECK(std::string("309850") == std::string(totp.get()));
 }

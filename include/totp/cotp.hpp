@@ -42,7 +42,7 @@ uchar   *base32_decode     (const char   *user_data_untrimmed,
 bool     is_string_valid_b32 (const char *user_data);
 
 char    *get_hotp          (const char   *base32_encoded_secret,
-                            long          counter,
+                            long long          counter,
                             int           digits,
                             int           sha_algo,
                             cotp_error_t *err_code);
@@ -58,7 +58,7 @@ char    *get_steam_totp    (const char   *base32_encoded_secret,
                             cotp_error_t *err_code);
 
 char    *get_totp_at       (const char   *base32_encoded_secret,
-                            long          time,
+                            long long          time,
                             int           digits,
                             int           period,
                             int           sha_algo,
