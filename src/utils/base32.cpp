@@ -6,14 +6,14 @@
 #define strdup _strdup
 #endif
 
-#define BITS_PER_BYTE               8
-#define BITS_PER_B32_BLOCK          5
+size_t BITS_PER_BYTE = 8;
+size_t BITS_PER_B32_BLOCK = 5;
 
 // 64 MB should be more than enough
-#define MAX_ENCODE_INPUT_LEN        (64*1024*1024)
+size_t MAX_ENCODE_INPUT_LEN = 64*1024*1024;
 
 // if 64 MB of data is encoded than it should be also possible to decode it. That's why a bigger input is allowed for decoding
-#define MAX_DECODE_BASE32_INPUT_LEN ((MAX_ENCODE_INPUT_LEN * 8 + 4) / 5)
+size_t MAX_DECODE_BASE32_INPUT_LEN = ((MAX_ENCODE_INPUT_LEN * 8 + 4) / 5);
 
 const uint8_t b32_alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
@@ -25,7 +25,7 @@ static bool          has_space      (const char *str);
 
 static cotp_error_t  check_input    (const uint8_t *user_data,
                                      size_t         data_len,
-                                     int32_t        max_len);
+                                     size_t        max_len);
 
 static int           strip_char     (char          *str);
 
@@ -53,7 +53,7 @@ base32_encode (const uint8_t *user_data,
         // the user might give the input with the null byte, we need to check for that
         null_terminated = true;
     }
-    for (int i = 0; i < data_len; i++) {
+    for (size_t i = 0; i < data_len; i++) {
         if (null_terminated && user_data[i] == '\0' && i == data_len-1) {
             break;
         }
@@ -74,10 +74,10 @@ base32_encode (const uint8_t *user_data,
         return NULL;
     }
 
-    for (int i = 0, j = 0; i < user_data_chars; i += 5) {
+    for (size_t i = 0, j = 0; i < user_data_chars; i += 5) {
         uint64_t quintuple = 0;
 
-        for (int k = 0; k < 5; k++) {
+        for (size_t k = 0; k < 5; k++) {
             quintuple = (quintuple << 8) | (i + k < user_data_chars ? user_data[i + k] : 0);
         }
 
@@ -126,7 +126,7 @@ base32_decode (const char   *user_data_untrimmed,
     }
 
     size_t user_data_chars = 0;
-    for (int i = 0; i < data_len; i++) {
+    for (size_t i = 0; i < data_len; i++) {
         // As it's not known whether data_len is with or without the +1 for the null byte, a manual check is required.
         if (user_data[i] != '=' && user_data[i] != '\0') {
             user_data_chars += 1;
@@ -142,8 +142,8 @@ base32_decode (const char   *user_data_untrimmed,
     }
 
     uint8_t mask, current_byte = 0;
-    int bits_left = 8;
-    for (int i = 0, j = 0; i < user_data_chars; i++) {
+    size_t bits_left = 8;
+    for (size_t i = 0, j = 0; i < user_data_chars; i++) {
         int char_index = get_char_index ((uint8_t)user_data[i]);
         if (bits_left > BITS_PER_B32_BLOCK) {
             mask = (uint8_t)char_index << (bits_left - BITS_PER_B32_BLOCK);
@@ -229,9 +229,9 @@ has_space (const char *str)
 static int
 get_char_index (uint8_t c)
 {
-    for (int i = 0; i < sizeof(b32_alphabet); i++) {
+    for (size_t i = 0; i < sizeof(b32_alphabet); i++) {
         if (b32_alphabet[i] == c) {
-            return i;
+            return int(i);
         }
     }
     return -1;
@@ -262,7 +262,7 @@ strip_char (char *str)
 static cotp_error_t
 check_input (const uint8_t *user_data,
              size_t         data_len,
-             int32_t        max_len)
+             size_t        max_len)
 {
     if (!user_data || data_len > max_len) {
         return INVALID_USER_INPUT;
