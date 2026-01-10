@@ -1,5 +1,5 @@
 #include <string>
-#include "CppStaticLib/CppStaticLib.hpp"
+#include "totp/totp.hpp"
 
 
 namespace csl {
