@@ -1,18 +1,15 @@
-#pragma once
+#ifndef TOTP_H
+#define TOTP_H
+#include <cstdlib>
+#include <memory>
 #include <string>
 
-namespace csl {
-  std::string getString();
+namespace otp
+{
 
-  constexpr int factorialConstexpr(int input) noexcept {
-    if (input < 2) {
-      return 1;
-    }
+using totp_guard = std::unique_ptr<char, decltype(&free)>;
 
-    return input * factorialConstexpr(input - 1);
-  }
+totp_guard getTOTP(const std::string& secret, long epochSeconds);
 
-  int factorial(int input) noexcept;
-
-  int uncoveredFunction(int value) noexcept;
-}  // namespace csl
+}
+#endif // TOTP_H

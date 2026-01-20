@@ -32,8 +32,18 @@ endif()
 
 include(cmake/CPM.cmake)
 
-# PackageProject.cmake will be used to make our target installable
-CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
+CPMAddPackage("gh:MarkRakhmatov/base32#776fc1b070d543827dc775cfa60b270e3f176acf")
+
+CPMAddPackage(
+  NAME openssl-cmake
+  GITHUB_REPOSITORY "jimmy-park/openssl-cmake"
+  GIT_TAG 3.6.0
+  OPTIONS "OPENSSL_CONFIGURE_OPTIONS no-shared\\\\;no-tests" "OPENSSL_CONFIGURE_VERBOSE ON"
+)
+
+# Set default visibility to hidden for all targets
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN YES)
 
 # ---- Add source files ----
 
@@ -62,7 +72,11 @@ if(NOT TEST_INSTALLED_VERSION)
 endif()
 
 # Link dependencies
-target_link_libraries(${PROJECT_NAME} PRIVATE)
+target_link_libraries(
+  ${PROJECT_NAME}
+  PRIVATE OpenSSL::SSL OpenSSL::Crypto
+  PUBLIC base32::base32
+)
 
 target_include_directories(
   ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
@@ -128,19 +142,45 @@ endif()
 # ---- Create an installable target ----
 # this allows users to install and find the library via `find_package()`.
 
-# the location where the project's version header will be placed should match the project's regular
-# header paths
-string(TOLOWER ${PROJECT_NAME}/version.h VERSION_HEADER_LOCATION)
+include(GNUInstallDirs)
 
-packageProject(
-  NAME ${PROJECT_NAME}
-  VERSION ${PROJECT_VERSION}
-  NAMESPACE ${PROJECT_NAME}
-  BINARY_DIR ${PROJECT_BINARY_DIR}
-  INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
-  INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
-  VERSION_HEADER "${VERSION_HEADER_LOCATION}"
-  COMPATIBILITY SameMajorVersion
+set(INSTALL_TARGETS ${PROJECT_NAME} base32)
+
+install(
+  TARGETS ${INSTALL_TARGETS}
+  DESTINATION lib
+  EXPORT ${PROJECT_NAME}Targets
+  INCLUDES
+  DESTINATION include/${PROJECT_NAME}
+)
+install(DIRECTORY include/${PROJECT_NAME} DESTINATION include)
+
+install(
+  EXPORT ${PROJECT_NAME}Targets
+  NAMESPACE ${PROJECT_NAME}::
+  DESTINATION lib/cmake/${PROJECT_NAME}
+)
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+  INSTALL_DESTINATION "lib/cmake/${PROJECT_NAME}"
+  NO_SET_AND_CHECK_MACRO NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake COMPATIBILITY ExactVersion
+)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+              ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+
+export(
+  TARGETS ${INSTALL_TARGETS}
+  NAMESPACE ${PROJECT_NAME}::
+  FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake"
 )
 
 # ---- Package project ----

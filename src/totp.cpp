@@ -1,31 +1,30 @@
-#include <string>
 #include "totp/totp.hpp"
+#include <totp/cotp.hpp>
+#include <string>
 
+namespace otp
+{
 
-namespace csl {
-
-  constexpr int g_maxIntFactorialInput = 12;
-
-  std::string getString() { return "cpp static lib example"; }
-
-  int factorial(int input) noexcept {
-    if (input > g_maxIntFactorialInput) {
-      return -1;
+void deleter(void* p) noexcept
+{
+    if (!p)
+    {
+        return;
     }
 
-    if (input < 2) {
-      return 1;
-    }
+    return free(p);
+}
 
-    return input * factorial(input - 1);
+totp_guard getTOTP(const std::string& secret, long epochSeconds)
+{
+  cotp_error_t err{};
+  char* result = get_totp_at(secret.c_str(), epochSeconds, 6, 30, SHA1, &err);
+  if (err != cotp_error::NO_ERROR)
+  {
+    return totp_guard(nullptr, &deleter);
   }
 
-  int uncoveredFunction(int value) noexcept {
-    if(value > 0) {
-      return 1;
-    }
+  return totp_guard(result, &deleter);
+}
 
-    return -1;
-  }
-
-}  // namespace csl
+}
