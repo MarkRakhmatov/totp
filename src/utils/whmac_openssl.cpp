@@ -4,9 +4,7 @@
 #include "totp/whmac.hpp"
 #include "totp/cotp.hpp"
 
-typedef struct whmac_handle_s whmac_handle_t;
-
-struct whmac_handle_s
+struct whmac_handle_t
 {
   EVP_MAC *mac;
   OSSL_PARAM mac_params[4];

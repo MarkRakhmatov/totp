@@ -8,6 +8,10 @@
 
 #define MIN_DIGTS 4
 #define MAX_DIGITS 10
+constexpr int DEFAULT_DIGITS = 6;
+constexpr int MIN_PERIOD = 0;
+constexpr int DEFAULT_PERIOD = 30;
+constexpr int MAX_PERIOD = 120;
 
 typedef enum cotp_error {
     NO_ERROR = 0,
@@ -45,20 +49,11 @@ char    *get_totp          (const char   *base32_encoded_secret,
                             int           sha_algo,
                             cotp_error_t *err_code);
 
-char    *get_steam_totp    (const char   *base32_encoded_secret,
-                            int          period,
-                            cotp_error_t *err_code);
-
 char    *get_totp_at       (const char   *base32_encoded_secret,
                             long long          time,
                             int           digits,
                             int           period,
                             int           sha_algo,
-                            cotp_error_t *err_code);
-
-char    *get_steam_totp_at (const char   *base32_encoded_secret,
-                            long          timestamp,
-                            int           period,
                             cotp_error_t *err_code);
 
 int64_t  otp_to_int        (const char   *otp,
