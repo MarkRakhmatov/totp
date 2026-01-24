@@ -16,16 +16,16 @@ void deleter(void* ptr) noexcept
     free(ptr);
 }
 
-totp_guard getTOTP(const std::string& secret, long epochSeconds)
+std::string getTOTP(const std::string& secret, long epochSeconds)
 {
   cotp_error_t err{};
-  char* result = get_totp_at(secret.c_str(), epochSeconds, DEFAULT_DIGITS, DEFAULT_PERIOD, SHA1, &err);
+  const auto& result = get_totp_at(secret.c_str(), epochSeconds, DEFAULT_DIGITS, DEFAULT_PERIOD, SHA1, &err);
   if (err != cotp_error::NO_ERROR)
   {
-    return {nullptr, &deleter};
+    return {};
   }
 
-  return {result, &deleter};
+  return result;
 }
 
 }

@@ -51,7 +51,7 @@ static cmem_guard<unsigned char> compute_hmac     (const char  *str,
                            long long        count,
                            whmac_handle_t *hd);
 
-static char  *finalize         (int          digits_length,
+static std::string finalize         (int          digits_length,
                       int          token);
 
 static int    check_period     (int          period);
@@ -64,7 +64,7 @@ constexpr int g_decimal_base = 10;
 constexpr int g_mod_step = 10ULL;
 
 
-char *
+std::string
 get_hotp (const char   *secret,
          long long     counter,
          int           digits,
@@ -73,34 +73,34 @@ get_hotp (const char   *secret,
 {
   if (whmac_check () == -1) {
     *err_code = WCRYPT_VERSION_MISMATCH;
-    return nullptr;
+    return {};
   }
 
   if (check_algo (algo) == INVALID_ALGO) {
     *err_code = INVALID_ALGO;
-    return nullptr;
+    return {};
   }
 
   if (check_otp_len (digits) == INVALID_DIGITS) {
     *err_code = INVALID_DIGITS;
-    return nullptr;
+    return {};
   }
 
   if (counter < 0) {
     *err_code = INVALID_COUNTER;
-    return nullptr;
+    return {};
   }
 
   whmac_handle_t *handle = whmac_gethandle (algo);
   if (handle == nullptr) {
-    return nullptr;
+    return {};
   }
 
   auto const hmac = compute_hmac (secret, counter, handle);
   if (hmac == nullptr) {
     *err_code = WHMAC_ERROR;
     whmac_freehandle(handle);
-    return nullptr;
+    return {};
   }
 
   size_t const dlen = whmac_getlen(handle);
@@ -115,7 +115,7 @@ get_hotp (const char   *secret,
 }
 
 
-char *
+std::string
 get_totp_at (const char   *secret,
             long long     current_timestamp,
             int           digits,
@@ -125,24 +125,24 @@ get_totp_at (const char   *secret,
 {
   if (whmac_check () == -1) {
     *err_code = WCRYPT_VERSION_MISMATCH;
-    return nullptr;
+    return {};
   }
 
   if (check_otp_len (digits) == INVALID_DIGITS) {
     *err_code = INVALID_DIGITS;
-    return nullptr;
+    return {};
   }
 
   if (check_period (period) == INVALID_PERIOD) {
     *err_code = INVALID_PERIOD;
-    return nullptr;
+    return {};
   }
 
   cotp_error_t err = NO_ERROR;
-  char *totp = get_hotp (secret, current_timestamp / period, digits, algo, &err);
+  const auto& totp = get_hotp (secret, current_timestamp / period, digits, algo, &err);
   if (err != NO_ERROR && err != VALID) {
     *err_code = err;
-    return nullptr;
+    return {};
   }
 
   *err_code = NO_ERROR;
@@ -151,7 +151,7 @@ get_totp_at (const char   *secret,
 }
 
 
-char *
+std::string
 get_totp (const char   *secret,
          int           digits,
          int           period,
@@ -172,7 +172,7 @@ otp_to_int (const char   *otp,
     return -1;
   }
 
-  if (otp[0] == '0') {
+  if (otp[0] == '0') { // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     *err_code = MISSING_LEADING_ZERO;
   } else {
     *err_code = NO_ERROR;
@@ -185,6 +185,7 @@ otp_to_int (const char   *otp,
 static cmem_guard<char>
 normalize_secret (const char *str)
 {
+  // NOLINTBEGIN(cppcoreguidelines-no-malloc, hicpp-no-malloc, cppcoreguidelines-pro-bounds-pointer-arithmetic)
   auto norm_str = cmem_guard<char>{static_cast<char*>(calloc (strlen (str) + 1, 1)), &free};
   if (norm_str == nullptr) {
     return norm_str;
@@ -198,6 +199,7 @@ normalize_secret (const char *str)
     }
   }
   return norm_str;
+  // NOLINTEND(cppcoreguidelines-no-malloc, hicpp-no-malloc, cppcoreguidelines-pro-bounds-pointer-arithmetic)
 }
 
 
@@ -208,10 +210,12 @@ truncate (const unsigned char *hmac,
 {
   // take the lower four bits of the last byte
   size_t const hlen = whmac_getlen(handle);
-  int const offset = hmac[hlen - 1] & 0x0f;
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  uint32_t const offset = hmac[hlen - 1] & 0x0fU;
 
   // Starting from the offset, take the successive 4 bytes while stripping the topmost bit to prevent it being handled as a signed integer
-  uint32_t bin_code = ((uint32_t)(hmac[offset] & 0x7f) << 24) | ((uint32_t)(hmac[offset + 1] & 0xff) << 16) | ((uint32_t)(hmac[offset + 2] & 0xff) << 8) | ((uint32_t)(hmac[offset + 3] & 0xff));
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  uint32_t const bin_code = ((uint32_t)(hmac[offset] & 0x7fU) << 24U) | ((uint32_t)(hmac[offset + 1] & 0xffU) << 16U) | ((uint32_t)(hmac[offset + 2] & 0xffU) << 8U) | ((uint32_t)(hmac[offset + 3U] & 0xffU));
 
   uint64_t mod = 1;
   for (int i = 0; i < digits_length; ++i) {
@@ -249,6 +253,7 @@ compute_hmac (const char *str,
   whmac_update (handle, C_reverse_byte_order.data(), sizeof(C_reverse_byte_order));
 
   size_t const dlen = whmac_getlen (handle);
+  // NOLINTNEXTLINE(cppcoreguidelines-no-malloc, hicpp-no-malloc)
   auto hmac = cmem_guard<unsigned char>{static_cast<unsigned char*>(calloc (dlen, 1)), &free};
   if (hmac == nullptr) {
     return {nullptr, &free};
@@ -264,16 +269,13 @@ compute_hmac (const char *str,
 }
 
 
-static char *
+static std::string
 finalize (int digits_length,
          int tok)
 {
-  char *token = (char*)calloc (digits_length + 1, 1);
-  if (token == nullptr) {
-    return nullptr;
-  }
+  auto token = std::string(digits_length, '\0');
   // Print with leading zeros without building an intermediate format string
-  snprintf (token, digits_length + 1, "%0*d", digits_length, tok);
+  snprintf (token.data(), digits_length + 1, "%0*d", digits_length, tok);
   return token;
 }
 

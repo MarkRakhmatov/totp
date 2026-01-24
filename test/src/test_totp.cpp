@@ -17,12 +17,11 @@ suite<"cpp otp"> cpptotp = [] {
                                ).count();
       expect(epoch_seconds == 1577836800);
       auto totp = otp::getTOTP("IO3SKWXDGBFTDDJUGPPJA3KEQAKTGLCV", static_cast<long>(epoch_seconds));
-      expect(totp.get());
-      expect(std::string("309850") == std::string(totp.get()));
+      expect(std::string("309850") == totp);
   };
 
   test("invalid input ERROR") = []{
     auto totp = otp::getTOTP("\226", 0);
-    expect (totp == nullptr);
+    expect (totp.empty());
   };
 };
