@@ -1,26 +1,18 @@
 #include "totp/totp.hpp"
-#include <cstdlib>
 #include <totp/cotp.hpp>
 #include <string>
+#include "totp/error.hpp"
 
 namespace otp
 {
-
-void deleter(void* ptr) noexcept
-{
-    if (ptr == nullptr)
-    {
-        return;
-    }
-
-    free(ptr);
-}
+  constexpr int DEFAULT_DIGITS = 6;
+  constexpr int DEFAULT_PERIOD = 30;
 
 std::string getTOTP(const std::string& secret, long epochSeconds)
 {
-  cotp_error_t err{};
-  const auto& result = get_totp_at(secret.c_str(), epochSeconds, DEFAULT_DIGITS, DEFAULT_PERIOD, SHA1, &err);
-  if (err != cotp_error::NO_ERROR)
+  error err{};
+  const auto& result = get_totp_at(secret.c_str(), epochSeconds, DigitsCount(DEFAULT_DIGITS), Period(DEFAULT_PERIOD), SHA::SHA1, &err);
+  if (err != error::NO_ERROR)
   {
     return {};
   }

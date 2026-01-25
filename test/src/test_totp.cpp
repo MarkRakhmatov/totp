@@ -7,6 +7,7 @@
 using namespace std::chrono_literals;
 using namespace std::chrono;
 using namespace boost::ut;
+using namespace otp;
 
 suite<"cpp otp"> cpptotp = [] {
     test("getTOTP OK") = []{

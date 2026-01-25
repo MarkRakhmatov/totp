@@ -1,107 +1,101 @@
-#include <openssl/conf.h>
+#include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include <openssl/params.h>
+#include <cstddef>
+#include <array>
+#include <cstdio>
+#include <cstdlib>
 #include "totp/whmac.hpp"
 #include "totp/cotp.hpp"
 
-struct whmac_handle_t
-{
-  EVP_MAC *mac;
-  OSSL_PARAM mac_params[4];
-  EVP_MAC_CTX *ctx;
-  int algo;
-  size_t dlen;
+const std::array<const char*, 3> openssl_algopp{
+    "SHA1",
+    "SHA256",
+    "SHA512",
 };
 
 int
-whmac_check (void)
+whmac_check ()
 {
   return 0;
 }
 
 size_t
-whmac_getlen (whmac_handle_t *hd)
+whmac_getlen (whmac_handle_t& hd)
 {
-  return hd->dlen;
+  return hd.dlen;
 }
 
-whmac_handle_t *
-whmac_gethandle (int algo)
+whmac_handle_t whmac_gethandle(otp::SHA algo)
 {
-  const char *openssl_algo[] = {
-      "SHA1",
-      "SHA256",
-      "SHA512",
-  };
+  whmac_handle_t whmac_handle{};
 
-  whmac_handle_t *whmac_handle = NULL;
-  if (algo > 2) {
-    return NULL;
+  if (algo > otp::SHA::SHA512) {
+    return whmac_handle;
   }
 
-  EVP_MAC *mac = EVP_MAC_fetch (NULL, "HMAC", NULL);
-  if (mac != NULL) {
-    whmac_handle = (whmac_handle_t*) calloc (1, sizeof(*whmac_handle));
-    if (whmac_handle == NULL) {
-      return NULL;
-    }
-    whmac_handle->mac = mac;
-    whmac_handle->algo = algo;
+  EVP_MAC *mac = EVP_MAC_fetch (nullptr, "HMAC", nullptr);
+  if (mac != nullptr) {
+    whmac_handle.mac = mac;
+    whmac_handle.algo = algo;
 
-    size_t params_n = 0;
-
-    whmac_handle->mac_params[params_n++] = OSSL_PARAM_construct_utf8_string ("digest", (char *)openssl_algo[algo], 0);
-    whmac_handle->mac_params[params_n] = OSSL_PARAM_construct_end ();
+    whmac_handle.mac_params[0] = OSSL_PARAM_construct_utf8_string(
+        "digest",
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast, cppcoreguidelines-pro-bounds-constant-array-index)
+        const_cast<char *>(openssl_algopp[(static_cast<int>(algo))]),
+        0
+    );
+    whmac_handle.mac_params[1] = OSSL_PARAM_construct_end ();
   }
+
   return whmac_handle;
 }
 
-void
-whmac_freehandle (whmac_handle_t *hd)
+void whmac_freehandle (whmac_handle_t& hd)
 {
-  EVP_MAC_free (hd->mac);
-  free (hd);
+  EVP_MAC_free (hd.mac);
 }
 
-int
-whmac_setkey (whmac_handle_t *hd,
+otp::error
+whmac_setkey (whmac_handle_t& hd,
              unsigned char  *buffer,
              size_t          buflen)
 {
-  hd->ctx = EVP_MAC_CTX_new (hd->mac);
-  if (hd->ctx && !EVP_MAC_init (hd->ctx, buffer, buflen, hd->mac_params)) {
+  hd.ctx = EVP_MAC_CTX_new (hd.mac);
+  if ((hd.ctx != nullptr) && (EVP_MAC_init (hd.ctx, buffer, buflen, hd.mac_params.data()) == 0)) {
     ERR_print_errors_fp (stderr);
-    return -INVALID_ALGO;
+    return otp::error::INVALID_ALGO;
   }
-  hd->dlen = EVP_MAC_CTX_get_mac_size (hd->ctx);
-  return NO_ERROR;
+  hd.dlen = EVP_MAC_CTX_get_mac_size (hd.ctx);
+  return otp::error::NO_ERROR;
 }
 
 void
-whmac_update (whmac_handle_t *hd,
+whmac_update (whmac_handle_t& hd,
              unsigned char  *buffer,
              size_t          buflen)
 {
-  EVP_MAC_update (hd->ctx, buffer, buflen);
+  EVP_MAC_update (hd.ctx, buffer, buflen);
 }
 
 ssize_t
-whmac_finalize(whmac_handle_t *hd,
+whmac_finalize(whmac_handle_t& hd,
                unsigned char  *buffer,
                size_t          buflen)
 {
-  size_t dlen = EVP_MAC_CTX_get_mac_size (hd->ctx);
-  if (buffer == NULL) {
+  size_t dlen = EVP_MAC_CTX_get_mac_size (hd.ctx);
+  if (buffer == nullptr) {
     return ssize_t(dlen);
   }
 
   if (dlen > buflen) {
-    return -MEMORY_ALLOCATION_ERROR;
+    return static_cast<ssize_t>(otp::error::MEMORY_ALLOCATION_ERROR);
   }
 
-  EVP_MAC_final (hd->ctx, buffer, &dlen, buflen);
-  EVP_MAC_CTX_free (hd->ctx);
-  hd->ctx = NULL;
+  EVP_MAC_final (hd.ctx, buffer, &dlen, buflen);
+  EVP_MAC_CTX_free (hd.ctx);
+  hd.ctx = nullptr;
 
   return ssize_t(dlen);
 }
