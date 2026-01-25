@@ -6,9 +6,7 @@
 #include <cstdint>
 #include <totp/error.hpp>
 
-#if defined(_MSC_VER)
 using ssize_t = long;
-#endif
 
 
 namespace otp {

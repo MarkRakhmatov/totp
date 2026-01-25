@@ -122,7 +122,7 @@ namespace otp
 
   std::string
   get_totp_at (const char   *secret,
-              long long     current_timestamp,
+              long long     time,
               DigitsCount           digits,
               Period           period,
               SHA algo,
@@ -144,7 +144,7 @@ namespace otp
     }
 
     error err = error::NO_ERROR;
-    const auto& totp = get_hotp (secret, Counter(current_timestamp / period.value), digits, algo, &err);
+    const auto& totp = get_hotp (secret, Counter(time / period.value), digits, algo, &err);
     if (err != error::NO_ERROR && err != error::VALID) {
       *err_code = err;
       return {};
@@ -253,7 +253,7 @@ namespace otp
     whmac_update (handle, C_reverse_byte_order.data(), sizeof(C_reverse_byte_order));
 
     size_t const dlen = whmac_getlen (handle);
-    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc, hicpp-no-malloc)
+
     auto hmac = std::vector<uchar>(dlen, ' ');
 
     ssize_t const flen = whmac_finalize (handle, hmac.data(), dlen);

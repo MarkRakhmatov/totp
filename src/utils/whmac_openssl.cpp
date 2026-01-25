@@ -6,14 +6,17 @@
 #include <array>
 #include <cstdio>
 #include <cstdlib>
+#include <string>
+#include "totp/error.hpp"
 #include "totp/whmac.hpp"
 #include "totp/cotp.hpp"
 
-const std::array<const char*, 3> openssl_algopp{
-    "SHA1",
-    "SHA256",
-    "SHA512",
-};
+
+char* get_algo_name(otp::SHA algo) {
+  static auto openssl_algo = std::to_array<std::string>({ "SHA1", "SHA256", "SHA512" });
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+  return openssl_algo[static_cast<size_t>(algo)].data();
+}
 
 int
 whmac_check ()
@@ -36,18 +39,19 @@ whmac_handle_t whmac_gethandle(otp::SHA algo)
   }
 
   EVP_MAC *mac = EVP_MAC_fetch (nullptr, "HMAC", nullptr);
-  if (mac != nullptr) {
-    whmac_handle.mac = mac;
-    whmac_handle.algo = algo;
-
-    whmac_handle.mac_params[0] = OSSL_PARAM_construct_utf8_string(
-        "digest",
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast, cppcoreguidelines-pro-bounds-constant-array-index)
-        const_cast<char *>(openssl_algopp[(static_cast<int>(algo))]),
-        0
-    );
-    whmac_handle.mac_params[1] = OSSL_PARAM_construct_end ();
+  if (mac == nullptr) {
+    return whmac_handle;
   }
+
+  whmac_handle.mac = mac;
+  whmac_handle.algo = algo;
+
+  whmac_handle.mac_params[0] = OSSL_PARAM_construct_utf8_string(
+      "digest",
+      get_algo_name(algo),
+      0
+  );
+  whmac_handle.mac_params[1] = OSSL_PARAM_construct_end ();
 
   return whmac_handle;
 }
@@ -57,11 +61,7 @@ void whmac_freehandle (whmac_handle_t& hd)
   EVP_MAC_free (hd.mac);
 }
 
-otp::error
-whmac_setkey (whmac_handle_t& hd,
-             unsigned char  *buffer,
-             size_t          buflen)
-{
+otp::error whmac_setkey(whmac_handle_t& hd, unsigned char* buffer, size_t buflen) {
   hd.ctx = EVP_MAC_CTX_new (hd.mac);
   if ((hd.ctx != nullptr) && (EVP_MAC_init (hd.ctx, buffer, buflen, hd.mac_params.data()) == 0)) {
     ERR_print_errors_fp (stderr);
