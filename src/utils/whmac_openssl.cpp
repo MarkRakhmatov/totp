@@ -9,10 +9,10 @@
 #include <string>
 #include "totp/error.hpp"
 #include "totp/whmac.hpp"
-#include "totp/cotp.hpp"
+#include "totp/totp.hpp"
 
 
-char* get_algo_name(otp::SHA algo) {
+char* get_algo_name(totp::SHA algo) {
   static auto openssl_algo = std::to_array<std::string>({ "SHA1", "SHA256", "SHA512" });
   // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
   return openssl_algo[static_cast<size_t>(algo)].data();
@@ -30,11 +30,11 @@ whmac_getlen (whmac_handle_t& hd)
   return hd.dlen;
 }
 
-whmac_handle_t whmac_gethandle(otp::SHA algo)
+whmac_handle_t whmac_gethandle(totp::SHA algo)
 {
   whmac_handle_t whmac_handle{};
 
-  if (algo > otp::SHA::SHA512) {
+  if (algo > totp::SHA::SHA512) {
     return whmac_handle;
   }
 
@@ -61,14 +61,14 @@ void whmac_freehandle (whmac_handle_t& hd)
   EVP_MAC_free (hd.mac);
 }
 
-otp::error whmac_setkey(whmac_handle_t& hd, unsigned char* buffer, size_t buflen) {
+totp::error whmac_setkey(whmac_handle_t& hd, unsigned char* buffer, size_t buflen) {
   hd.ctx = EVP_MAC_CTX_new (hd.mac);
   if ((hd.ctx != nullptr) && (EVP_MAC_init (hd.ctx, buffer, buflen, hd.mac_params.data()) == 0)) {
     ERR_print_errors_fp (stderr);
-    return otp::error::INVALID_ALGO;
+    return totp::error::INVALID_ALGO;
   }
   hd.dlen = EVP_MAC_CTX_get_mac_size (hd.ctx);
-  return otp::error::NO_ERROR;
+  return totp::error::NO_ERROR;
 }
 
 void
@@ -90,7 +90,7 @@ whmac_finalize(whmac_handle_t& hd,
   }
 
   if (dlen > buflen) {
-    return static_cast<ssize_t>(otp::error::MEMORY_ALLOCATION_ERROR);
+    return static_cast<ssize_t>(totp::error::MEMORY_ALLOCATION_ERROR);
   }
 
   EVP_MAC_final (hd.ctx, buffer, &dlen, buflen);

@@ -2,7 +2,7 @@
 #define ERROR_HPP
 #include <cstdint>
 
-namespace otp
+namespace totp
 {
   enum struct error: std::uint8_t {
     NO_ERROR = 0,

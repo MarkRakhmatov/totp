@@ -1,10 +1,14 @@
 #include <boost/ut.hpp>
-#include <totp/cotp.hpp>
+#include <totp/totp.hpp>
 #include <base32/base32.hpp>
 #include <string>
+#include <chrono>
 
 using namespace boost::ut;
-using namespace otp;
+using namespace totp;
+
+using namespace std::chrono_literals;
+using namespace std::chrono;
 
 suite<"c otp"> cotp = [] {
   test("totp_rfc6238 test_8_digits_SHA::SHA1") = []{
@@ -15,10 +19,8 @@ suite<"c otp"> cotp = [] {
       base32::error b32_err{};
       auto K_base32 = base32::encode(base32::Bytes(my_string.begin(), my_string.end()), b32_err);
 
-      error err{};
-      std::string totp;
       for (int i = 0; i < 6; i++) {
-          totp = get_totp_at (K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA1, &err);
+          const auto& totp = get_totp_at(K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA1);
           expect (totp == std::string(expected_totp[i]));
       }
     };
@@ -31,10 +33,9 @@ suite<"c otp"> cotp = [] {
       base32::error b32_err{};
       auto K_base32 = base32::encode(base32::Bytes(K.begin(), K.end()), b32_err);
 
-      error err{};
       for (int i = 0; i < 6; i++) {
-          std::string totp = get_totp_at (K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA1, &err);
-          int64_t int_totp = otp_to_int (totp.c_str(), &err);
+          const auto& totp = get_totp_at(K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA1);
+          auto int_totp = otp_to_int(totp.value());
           expect(int_totp == expected_totp[i]);
       }
   };
@@ -47,8 +48,7 @@ suite<"c otp"> cotp = [] {
       base32::error base32_err{};
       const auto& K_base32 = base32::encode(base32::Bytes(K.begin(), K.end()), base32_err);
 
-      error err{};
-      std::string totp = get_totp_at (K_base32.c_str(), counter, DigitsCount(10), Period(30), SHA::SHA1, &err);
+      const auto& totp = get_totp_at(K_base32.c_str(), counter, DigitsCount(10), Period(30), SHA::SHA1);
       expect(totp == std::string(expected_totp));
   };
 
@@ -60,9 +60,8 @@ suite<"c otp"> cotp = [] {
       base32::error cotp_err{};
       const auto& K_base32 = base32::encode (base32::Bytes(K.begin(), K.end()), cotp_err);
 
-      error err{};
-      std::string totp = get_totp_at (K_base32.c_str(), counter, DigitsCount(10), Period(30), SHA::SHA1, &err);
-      int64_t int_totp = otp_to_int (totp.c_str(), &err);
+      const auto& totp = get_totp_at(K_base32.c_str(), counter, DigitsCount(10), Period(30), SHA::SHA1);
+      auto int_totp = otp_to_int(totp.value());
       expect (int_totp == expected_totp);
   };
 
@@ -74,11 +73,9 @@ suite<"c otp"> cotp = [] {
       base32::error cotp_err{};
       const auto& K_base32 = base32::encode (base32::Bytes(K.begin(), K.end()), cotp_err);
 
-      error err{};
-      std::string totp;
       for (int i = 0; i < 6; i++) {
-          totp = get_totp_at (K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA256, &err);
-          expect (totp == std::string(expected_totp[i]));
+          const auto& totp = get_totp_at (K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA256);
+          expect(totp == std::string(expected_totp[i]));
       }
   };
 
@@ -90,10 +87,8 @@ suite<"c otp"> cotp = [] {
       base32::error cotp_err{};
       const auto& K_base32 = base32::encode (base32::Bytes(K.begin(), K.end()), cotp_err);
 
-      error err{};
-      std::string totp;
       for (int i = 0; i < 6; i++) {
-          totp = get_totp_at (K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA512, &err);
+          const auto& totp = get_totp_at (K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA512);
           expect (totp == std::string(expected_totp[i]));
       }
   };
@@ -101,92 +96,77 @@ suite<"c otp"> cotp = [] {
   test("hotp_rfc, test_6_digits") = []{
       std::string K = "12345678901234567890";
       const int counter[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-      const char *expected_hotp[] = {"755224", "287082", "359152", "969429", "338314", "254676", "287922", "162583", "399871", "520489"};
+      std::string expected_hotp[] = {"755224", "287082", "359152", "969429", "338314", "254676", "287922", "162583", "399871", "520489"};
 
       base32::error cotp_err{};
       const auto& K_base32 = base32::encode(base32::Bytes(K.begin(), K.end()), cotp_err);
 
-      error err{};
-      std::string hotp;
       for (int i = 0; i < 10; i++) {
-          hotp = get_hotp (K_base32.c_str(), Counter(counter[i]), DigitsCount(6), SHA::SHA1, &err);
-          expect (std::string(hotp) == std::string(expected_hotp[i]));
+          const auto hotp = get_hotp (K_base32.c_str(), Counter(counter[i]), DigitsCount(6), SHA::SHA1);
+          expect(hotp == expected_hotp[i]);
       }
   };
 
   test("hotp_rfc, test_wrong_digits_2") = []{
       std::string K = "this is a secret";
 
-      error err{};
-      std::string totp = get_totp (K.c_str(), DigitsCount(2), Period(30), SHA::SHA1, &err);
+      const auto& totp = get_totp (K.c_str(), DigitsCount(2), Period(30), SHA::SHA1);
 
-      expect (err == error::INVALID_DIGITS);
-      expect (totp.empty());
+      expect (totp.error() == error::INVALID_DIGITS);
   };
 
 
   test("hotp_rfc, test_wrong_digits_16") = []{
       std::string K = "this is a secret";
 
-      error err{};
-      std::string totp = get_totp (K.c_str(), DigitsCount(16), Period(30), SHA::SHA1, &err);
+      const auto& totp = get_totp(K.c_str(), DigitsCount(16), Period(30), SHA::SHA1);
 
-      expect (err == error::INVALID_DIGITS);
-      expect (totp.empty());
+      expect (totp.error() == error::INVALID_DIGITS);
   };
 
 
   test("hotp_rfc, test_period_zero") = []{
       std::string K = "this is a secret";
 
-      error err{};
-      std::string totp = get_totp (K.c_str(), DigitsCount(6), Period(0), SHA::SHA1, &err);
+      const auto& totp = get_totp (K.c_str(), DigitsCount(6), Period(0), SHA::SHA1);
 
-      expect (err == error::INVALID_PERIOD);
-      expect (totp.empty());
+      expect (totp.error() == error::INVALID_PERIOD);
   };
 
 
   test("hotp_rfc, test_totp_wrong_negative") = []{
       std::string K = "this is a secret";
 
-      error err{};
-      std::string totp = get_totp (K.c_str(), DigitsCount(6), Period(-20), SHA::SHA1, &err);
+      const auto& totp = get_totp(K.c_str(), DigitsCount(6), Period(-20), SHA::SHA1);
 
-      expect (err == error::INVALID_PERIOD);
-      expect (totp.empty());
+      expect (totp.error() == error::INVALID_PERIOD);
   };
 
 
   test("hotp_rfc, test_hotp_wrong_negative") = []{
       std::string K = "this is a secret";
 
-      error err{};
-      std::string hotp = get_hotp (K.c_str(), Counter(-6), DigitsCount(8), SHA::SHA1, &err);
+      const auto& hotp = get_hotp(K.c_str(), Counter(-6), DigitsCount(8), SHA::SHA1);
 
-      expect (err == error::INVALID_COUNTER);
-      expect (hotp.empty());
+      expect (hotp.error() == error::INVALID_COUNTER);
   };
 
 
   test("totp_generic, test_secret_with_space") = []{
       std::string K = "hxdm vjec jjws rb3h wizr 4ifu gftm xboz";
-      const char *expected_totp = "488431";
+      std::string expected_totp = "488431";
 
-      error err{};
-      std::string totp = get_totp_at (K.c_str(), 1506268800, DigitsCount(6), Period(30), SHA::SHA1, &err);
-      expect (totp == std::string(expected_totp));
+      const auto& totp = get_totp_at (K.c_str(), 1506268800, DigitsCount(6), Period(30), SHA::SHA1);
+      expect (totp == expected_totp);
   };
 
 
   test("totp_generic, test_fail_invalid_b32_input") = []{
       std::string K = "This input is not valid!";
 
-      error err{};
-      std::string totp = get_totp (K.c_str(), DigitsCount(6), Period(30), SHA::SHA1, &err);
+      const auto& totp = get_totp (K.c_str(), DigitsCount(6), Period(30), SHA::SHA1);
 
-      expect (err == error::WHMAC_ERROR);
-      expect (totp.empty());
+      expect (totp.error() == error::WHMAC_ERROR);
   };
 
 
@@ -194,24 +174,21 @@ suite<"c otp"> cotp = [] {
       std::string K = "base32secret";
 
       int MD5 = 3;
-      error err{};
-      std::string totp = get_totp (K.c_str(), DigitsCount(6), Period(30), static_cast<SHA>(MD5), &err);
+      const auto& totp = get_totp(K.c_str(), DigitsCount(6), Period(30), static_cast<SHA>(MD5));
 
-      expect (err == error::INVALID_ALGO);
-      expect (totp.empty());
+      expect (totp.error() == error::INVALID_ALGO);
   };
 
 
   test("totp_rfc6238, test_60seconds") = []{
       std::string K = "12345678901234567890";
-      const char *expected_totp = "360094";
+      std::string expected_totp = "360094";
 
       base32::error cotp_err{};
       const auto& secret_base32 = base32::encode(base32::Bytes(K.begin(), K.end()), cotp_err);
 
-      error err{};
-      std::string totp = get_totp_at (secret_base32.c_str(), 1111111109, DigitsCount(6), Period(60), SHA::SHA1,  &err);
-      expect (totp == std::string(expected_totp));
+      const auto& totp = get_totp_at (secret_base32.c_str(), 1111111109, DigitsCount(6), Period(60), SHA::SHA1);
+      expect (totp == expected_totp);
   };
 
 
@@ -220,19 +197,35 @@ suite<"c otp"> cotp = [] {
       const long counter = 1234567890;
 
       base32::error cotp_err{};
-      const auto& K_base32 = base32::encode (base32::Bytes(K.begin(), K.end()), cotp_err);
+      const auto& K_base32 = base32::encode(base32::Bytes(K.begin(), K.end()), cotp_err);
 
-      error err{};
-      std::string totp = get_totp_at (K_base32.c_str(), counter, DigitsCount(10), Period(30), SHA::SHA1, &err);
-      int64_t int_totp = otp_to_int (totp.c_str(), &err);
-      expect (err == error::MISSING_LEADING_ZERO);
+      const auto& totp = get_totp_at(K_base32.c_str(), counter, DigitsCount(10), Period(30), SHA::SHA1);
+      auto int_totp = otp_to_int(totp.value());
       expect (int_totp == 689005924);
   };
 
   test("totp_int, test_err_invalid_input") = []{
-      error err{};
-      int64_t totp = otp_to_int ("124", &err);
-      expect (err == error::INVALID_USER_INPUT);
-      expect (totp == -1);
+      auto totp = otp_to_int ("124");
+      expect (totp.error() == error::INVALID_USER_INPUT);
+  };
+
+  test("get_totp_at OK") = []{
+    auto date = year_month_day(2020y, January, 1d);
+    std::chrono::sys_days timestamp_days = date;
+    auto epoch_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+                             timestamp_days.time_since_epoch()
+                             ).count();
+    expect(epoch_seconds == 1577836800);
+    auto totp = get_totp_at(
+        "IO3SKWXDGBFTDDJUGPPJA3KEQAKTGLCV",
+        static_cast<long>(epoch_seconds));
+    expect(totp.has_value());
+    expect(std::string("309850") == totp);
+  };
+
+  test("invalid input ERROR") = []{
+    auto totp = get_totp_at("\226", 0);
+    expect(totp.error() == error::WHMAC_ERROR);
+    expect(!totp.has_value());
   };
 };
