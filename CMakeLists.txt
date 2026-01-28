@@ -96,7 +96,7 @@ if(${PROJECT_NAME}_ENABLE_CODE_ANALYSIS)
       ${PROJECT_NAME}
       PROPERTIES
         CXX_CPPCHECK ${CPPCHECK_EXECUTABLE};
-        --std=c++${CMAKE_CXX_STANDARD};--enable=all;--error-exitcode=10;--suppressions-list=${PROJECT_SOURCE_DIR}/cppcheck.supp;
+        --std=c++${CMAKE_CXX_STANDARD};--enable=all;--Error-exitcode=10;--suppressions-list=${PROJECT_SOURCE_DIR}/cppcheck.supp;
     )
   endif()
 endif()

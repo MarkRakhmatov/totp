@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <string>
 #include <expected>
-#include "totp/error.hpp"
+#include "totp/Error.hpp"
 
 namespace totp
 {
@@ -17,7 +17,7 @@ namespace totp
 
   template <class T, class Tag>
   struct Strong {
-    explicit constexpr Strong(T v) : value(v) {}
+    explicit constexpr Strong(T value) : value(value) {}
     T value;
   };
 
@@ -25,29 +25,27 @@ namespace totp
   using DigitsCount = Strong<int, struct DigitsTag>;
   using Period = Strong<int, struct PersiodTag>;
 
-  constexpr DigitsCount DEFAULT_DIGITS(6);
-  constexpr Period DEFAULT_PERIOD(30);
+  constexpr DigitsCount gDefaultDigits(6);
+  constexpr Period gDefaultPeriod(30);
 
-  bool is_string_valid_b32(const char *user_data);
-
-  std::expected<std::string, error> get_hotp(
-      const char   *base32_encoded_secret,
+  std::expected<std::string, Error> GetHOTP(
+      const char   *base32EncodedSecret,
       Counter counter,
       DigitsCount digits,
-      SHA sha_algo);
+      SHA shaAlgo);
 
-  std::expected<std::string, error> get_totp(
-      const char *base32_encoded_secret,
+  std::expected<std::string, Error> GetTotp(
+      const char *base32EncodedSecret,
       DigitsCount digits,
       Period period,
-      SHA sha_algo=SHA::SHA1);
+      SHA shaAlgo=SHA::SHA1);
 
-  std::expected<std::string, error> get_totp_at(
-      const char *base32_encoded_secret,
+  std::expected<std::string, Error> GetTotpAt(
+      const char *base32EncodedSecret,
       long long time,
-      DigitsCount digits=DEFAULT_DIGITS,
-      Period period=DEFAULT_PERIOD,
-      SHA sha_algo=SHA::SHA1);
+      DigitsCount digits=gDefaultDigits,
+      Period period=gDefaultPeriod,
+      SHA shaAlgo=SHA::SHA1);
 
-  std::expected<int64_t, error>  otp_to_int(const std::string& otp);
+  std::expected<int64_t, Error>  TotpToInt(const std::string& otp);
 }

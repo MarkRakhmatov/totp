@@ -6,8 +6,8 @@
 #include <totp/totp.hpp>
 #include <string>
 
-void totpEmptyOrValidString(std::string s, long seconds) {
-  auto totp = otp::getTOTP(s, seconds);
+void totpEmptyOrValidString(const std::string& str, long seconds) {
+  auto totp = totp::GetTotpAt(str, seconds);
   if (!totp.empty()) {
     EXPECT_EQ(totp.size(), 6);
   }

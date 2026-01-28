@@ -7,95 +7,86 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
-#include "totp/error.hpp"
+#include <xstring>
+#include "totp/Error.hpp"
 #include "totp/whmac.hpp"
 #include "totp/totp.hpp"
 
+using namespace std::string_literals;
 
-char* get_algo_name(totp::SHA algo) {
-  static auto openssl_algo = std::to_array<std::string>({ "SHA1", "SHA256", "SHA512" });
+
+char* GetAlgoName(totp::SHA algo) {
+  static auto opensslAlgo = std::array<std::string, 3>{ "SHA1"s, "SHA256"s, "SHA512"s };
   // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-  return openssl_algo[static_cast<size_t>(algo)].data();
+  return opensslAlgo[static_cast<size_t>(algo)].data();
 }
 
-int
-whmac_check ()
+WhmacHandle WhmacGetHandle(totp::SHA algo)
 {
-  return 0;
-}
-
-size_t
-whmac_getlen (whmac_handle_t& hd)
-{
-  return hd.dlen;
-}
-
-whmac_handle_t whmac_gethandle(totp::SHA algo)
-{
-  whmac_handle_t whmac_handle{};
+  WhmacHandle handle{};
 
   if (algo > totp::SHA::SHA512) {
-    return whmac_handle;
+    return handle;
   }
 
   EVP_MAC *mac = EVP_MAC_fetch (nullptr, "HMAC", nullptr);
   if (mac == nullptr) {
-    return whmac_handle;
+    return handle;
   }
 
-  whmac_handle.mac = mac;
-  whmac_handle.algo = algo;
+  handle.mac = mac;
+  handle.algo = algo;
 
-  whmac_handle.mac_params[0] = OSSL_PARAM_construct_utf8_string(
+  handle.macParams[0] = OSSL_PARAM_construct_utf8_string(
       "digest",
-      get_algo_name(algo),
+      GetAlgoName(algo),
       0
   );
-  whmac_handle.mac_params[1] = OSSL_PARAM_construct_end ();
+  handle.macParams[1] = OSSL_PARAM_construct_end ();
 
-  return whmac_handle;
+  return handle;
 }
 
-void whmac_freehandle (whmac_handle_t& hd)
+void WhmacFreeHandle(WhmacHandle& handle)
 {
-  EVP_MAC_free (hd.mac);
+  EVP_MAC_free(handle.mac);
 }
 
-totp::error whmac_setkey(whmac_handle_t& hd, unsigned char* buffer, size_t buflen) {
-  hd.ctx = EVP_MAC_CTX_new (hd.mac);
-  if ((hd.ctx != nullptr) && (EVP_MAC_init (hd.ctx, buffer, buflen, hd.mac_params.data()) == 0)) {
+totp::Error WhmacSetKey(WhmacHandle& handle, unsigned char* buffer, size_t buflen) {
+  handle.ctx = EVP_MAC_CTX_new (handle.mac);
+  if ((handle.ctx != nullptr) && (EVP_MAC_init (handle.ctx, buffer, buflen, handle.macParams.data()) == 0)) {
     ERR_print_errors_fp (stderr);
-    return totp::error::INVALID_ALGO;
+    return totp::Error::InvalidAlgo;
   }
-  hd.dlen = EVP_MAC_CTX_get_mac_size (hd.ctx);
-  return totp::error::NO_ERROR;
+  handle.dlen = EVP_MAC_CTX_get_mac_size (handle.ctx);
+  return totp::Error::NoError;
 }
 
-void
-whmac_update (whmac_handle_t& hd,
-             unsigned char  *buffer,
-             size_t          buflen)
+void WhmacUpdate(
+    WhmacHandle& handle,
+    unsigned char *buffer,
+    size_t buflen)
 {
-  EVP_MAC_update (hd.ctx, buffer, buflen);
+  EVP_MAC_update (handle.ctx, buffer, buflen);
 }
 
-ssize_t
-whmac_finalize(whmac_handle_t& hd,
-               unsigned char  *buffer,
-               size_t          buflen)
+ssize_t WhmacFinalize(
+    WhmacHandle& handle,
+    unsigned char *buffer,
+    size_t buflen)
 {
-  size_t dlen = EVP_MAC_CTX_get_mac_size (hd.ctx);
+  size_t dlen = EVP_MAC_CTX_get_mac_size (handle.ctx);
   if (buffer == nullptr) {
     return ssize_t(dlen);
   }
 
   if (dlen > buflen) {
-    return static_cast<ssize_t>(totp::error::MEMORY_ALLOCATION_ERROR);
+    return static_cast<ssize_t>(totp::Error::MemoryAllocationError);
   }
 
-  EVP_MAC_final (hd.ctx, buffer, &dlen, buflen);
-  EVP_MAC_CTX_free (hd.ctx);
-  hd.ctx = nullptr;
+  EVP_MAC_final (handle.ctx, buffer, &dlen, buflen);
+  EVP_MAC_CTX_free (handle.ctx);
+  handle.ctx = nullptr;
 
   return ssize_t(dlen);
 }

@@ -4,18 +4,18 @@
 
 namespace totp
 {
-  enum struct error: std::uint8_t {
-    NO_ERROR = 0,
-    VALID,
-    WCRYPT_VERSION_MISMATCH,
-    INVALID_ALGO,
-    INVALID_DIGITS,
-    INVALID_PERIOD,
-    MEMORY_ALLOCATION_ERROR,
-    INVALID_USER_INPUT,
-    MISSING_LEADING_ZERO,
-    INVALID_COUNTER,
-    WHMAC_ERROR
+  enum struct Error: std::uint8_t {
+    NoError = 0,
+    Valid,
+    WcryptVersionMismatch,
+    InvalidAlgo,
+    InvalidDigits,
+    InvalidPeriod,
+    MemoryAllocationError,
+    InvalidUserInput,
+    MissingLeadingZero,
+    InvalidCounter,
+    WhmacError
   };
 }
 
