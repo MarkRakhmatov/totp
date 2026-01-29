@@ -20,7 +20,7 @@ suite<"c otp"> cotp = [] {
       auto K_base32 = base32::encode(base32::Bytes(my_string.begin(), my_string.end()), b32_err);
 
       for (int i = 0; i < 6; i++) {
-          const auto& totp = GetTotpAt(K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA1);
+          const auto& totp = getTotpAt(K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA1);
           expect (totp == std::string(expected_totp[i]));
       }
     };
@@ -34,8 +34,8 @@ suite<"c otp"> cotp = [] {
       auto K_base32 = base32::encode(base32::Bytes(K.begin(), K.end()), b32_err);
 
       for (int i = 0; i < 6; i++) {
-          const auto& totp = GetTotpAt(K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA1);
-          auto int_totp = TotpToInt(totp.value());
+          const auto& totp = getTotpAt(K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA1);
+          auto int_totp = totpToInt(totp.value());
           expect(int_totp == expected_totp[i]);
       }
   };
@@ -48,7 +48,7 @@ suite<"c otp"> cotp = [] {
       base32::Error base32_err{};
       const auto& K_base32 = base32::encode(base32::Bytes(K.begin(), K.end()), base32_err);
 
-      const auto& totp = GetTotpAt(K_base32.c_str(), counter, DigitsCount(10), Period(30), SHA::SHA1);
+      const auto& totp = getTotpAt(K_base32.c_str(), counter, DigitsCount(10), Period(30), SHA::SHA1);
       expect(totp == std::string(expected_totp));
   };
 
@@ -60,8 +60,8 @@ suite<"c otp"> cotp = [] {
       base32::Error cotp_err{};
       const auto& K_base32 = base32::encode (base32::Bytes(K.begin(), K.end()), cotp_err);
 
-      const auto& totp = GetTotpAt(K_base32.c_str(), counter, DigitsCount(10), Period(30), SHA::SHA1);
-      auto int_totp = TotpToInt(totp.value());
+      const auto& totp = getTotpAt(K_base32.c_str(), counter, DigitsCount(10), Period(30), SHA::SHA1);
+      auto int_totp = totpToInt(totp.value());
       expect (int_totp == expected_totp);
   };
 
@@ -74,7 +74,7 @@ suite<"c otp"> cotp = [] {
       const auto& K_base32 = base32::encode (base32::Bytes(K.begin(), K.end()), cotp_err);
 
       for (int i = 0; i < 6; i++) {
-          const auto& totp = GetTotpAt (K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA256);
+          const auto& totp = getTotpAt (K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA256);
           expect(totp == std::string(expected_totp[i]));
       }
   };
@@ -88,7 +88,7 @@ suite<"c otp"> cotp = [] {
       const auto& K_base32 = base32::encode (base32::Bytes(K.begin(), K.end()), cotp_err);
 
       for (int i = 0; i < 6; i++) {
-          const auto& totp = GetTotpAt (K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA512);
+          const auto& totp = getTotpAt (K_base32.c_str(), counter[i], DigitsCount(8), Period(30), SHA::SHA512);
           expect (totp == std::string(expected_totp[i]));
       }
   };
@@ -102,7 +102,7 @@ suite<"c otp"> cotp = [] {
       const auto& K_base32 = base32::encode(base32::Bytes(K.begin(), K.end()), cotp_err);
 
       for (int i = 0; i < 10; i++) {
-          const auto hotp = GetHOTP (K_base32.c_str(), Counter(counter[i]), DigitsCount(6), SHA::SHA1);
+          const auto hotp = getHotp (K_base32.c_str(), Counter(counter[i]), DigitsCount(6), SHA::SHA1);
           expect(hotp == expected_hotp[i]);
       }
   };
@@ -110,7 +110,7 @@ suite<"c otp"> cotp = [] {
   test("hotp_rfc, test_wrong_digits_2") = []{
       std::string K = "this is a secret";
 
-      const auto& totp = GetTotp(K.c_str(), DigitsCount(2), Period(30), SHA::SHA1);
+      const auto& totp = getTotp(K.c_str(), DigitsCount(2), Period(30), SHA::SHA1);
 
       expect (totp.error() == Error::InvalidDigits);
   };
@@ -119,7 +119,7 @@ suite<"c otp"> cotp = [] {
   test("hotp_rfc, test_wrong_digits_16") = []{
       std::string K = "this is a secret";
 
-      const auto& totp = GetTotp(K.c_str(), DigitsCount(16), Period(30), SHA::SHA1);
+      const auto& totp = getTotp(K.c_str(), DigitsCount(16), Period(30), SHA::SHA1);
 
       expect (totp.error() == Error::InvalidDigits);
   };
@@ -128,7 +128,7 @@ suite<"c otp"> cotp = [] {
   test("hotp_rfc, test_period_zero") = []{
       std::string K = "this is a secret";
 
-      const auto& totp = GetTotp (K.c_str(), DigitsCount(6), Period(0), SHA::SHA1);
+      const auto& totp = getTotp (K.c_str(), DigitsCount(6), Period(0), SHA::SHA1);
 
       expect (totp.error() == Error::InvalidPeriod);
   };
@@ -137,7 +137,7 @@ suite<"c otp"> cotp = [] {
   test("hotp_rfc, test_totp_wrong_negative") = []{
       std::string K = "this is a secret";
 
-      const auto& totp = GetTotp(K.c_str(), DigitsCount(6), Period(-20), SHA::SHA1);
+      const auto& totp = getTotp(K.c_str(), DigitsCount(6), Period(-20), SHA::SHA1);
 
       expect (totp.error() == Error::InvalidPeriod);
   };
@@ -146,7 +146,7 @@ suite<"c otp"> cotp = [] {
   test("hotp_rfc, test_hotp_wrong_negative") = []{
       std::string K = "this is a secret";
 
-      const auto& hotp = GetHOTP(K.c_str(), Counter(-6), DigitsCount(8), SHA::SHA1);
+      const auto& hotp = getHotp(K.c_str(), Counter(-6), DigitsCount(8), SHA::SHA1);
 
       expect (hotp.error() == Error::InvalidCounter);
   };
@@ -156,7 +156,7 @@ suite<"c otp"> cotp = [] {
       std::string K = "hxdm vjec jjws rb3h wizr 4ifu gftm xboz";
       std::string expected_totp = "488431";
 
-      const auto& totp = GetTotpAt (K.c_str(), 1506268800, DigitsCount(6), Period(30), SHA::SHA1);
+      const auto& totp = getTotpAt (K.c_str(), 1506268800, DigitsCount(6), Period(30), SHA::SHA1);
       expect (totp == expected_totp);
   };
 
@@ -164,7 +164,7 @@ suite<"c otp"> cotp = [] {
   test("totp_generic, test_fail_invalid_b32_input") = []{
       std::string K = "This input is not valid!";
 
-      const auto& totp = GetTotp (K.c_str(), DigitsCount(6), Period(30), SHA::SHA1);
+      const auto& totp = getTotp (K.c_str(), DigitsCount(6), Period(30), SHA::SHA1);
 
       expect (totp.error() == Error::WhmacError);
   };
@@ -174,7 +174,7 @@ suite<"c otp"> cotp = [] {
       std::string K = "base32secret";
 
       int MD5 = 3;
-      const auto& totp = GetTotp(K.c_str(), DigitsCount(6), Period(30), static_cast<SHA>(MD5));
+      const auto& totp = getTotp(K.c_str(), DigitsCount(6), Period(30), static_cast<SHA>(MD5));
 
       expect (totp.error() == Error::InvalidAlgo);
   };
@@ -187,7 +187,7 @@ suite<"c otp"> cotp = [] {
       base32::Error cotp_err{};
       const auto& secret_base32 = base32::encode(base32::Bytes(K.begin(), K.end()), cotp_err);
 
-      const auto& totp = GetTotpAt(secret_base32.c_str(), 1111111109, DigitsCount(6), Period(60), SHA::SHA1);
+      const auto& totp = getTotpAt(secret_base32.c_str(), 1111111109, DigitsCount(6), Period(60), SHA::SHA1);
       expect (totp == expected_totp);
   };
 
@@ -199,13 +199,13 @@ suite<"c otp"> cotp = [] {
       base32::Error cotp_err{};
       const auto& K_base32 = base32::encode(base32::Bytes(K.begin(), K.end()), cotp_err);
 
-      const auto& totp = GetTotpAt(K_base32.c_str(), counter, DigitsCount(10), Period(30), SHA::SHA1);
-      auto int_totp = TotpToInt(totp.value());
+      const auto& totp = getTotpAt(K_base32.c_str(), counter, DigitsCount(10), Period(30), SHA::SHA1);
+      auto int_totp = totpToInt(totp.value());
       expect (int_totp == 689005924);
   };
 
   test("totp_int, test_err_invalid_input") = []{
-      auto totp = TotpToInt ("124");
+      auto totp = totpToInt ("124");
       expect (totp.error() == Error::InvalidUserInput);
   };
 
@@ -216,7 +216,7 @@ suite<"c otp"> cotp = [] {
                              timestamp_days.time_since_epoch()
                              ).count();
     expect(epoch_seconds == 1577836800);
-    auto totp = GetTotpAt(
+    auto totp = getTotpAt(
         "IO3SKWXDGBFTDDJUGPPJA3KEQAKTGLCV",
         static_cast<long>(epoch_seconds));
     expect(totp.has_value());
@@ -224,7 +224,7 @@ suite<"c otp"> cotp = [] {
   };
 
   test("invalid input ERROR") = []{
-    auto totp = GetTotpAt("\226", 0);
+    auto totp = getTotpAt("\226", 0);
     expect(totp.error() == Error::WhmacError);
     expect(!totp.has_value());
   };

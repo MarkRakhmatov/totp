@@ -28,24 +28,24 @@ namespace totp
   constexpr DigitsCount gDefaultDigits(6);
   constexpr Period gDefaultPeriod(30);
 
-  std::expected<std::string, Error> GetHOTP(
+  std::expected<std::string, Error> getHotp(
       const char   *base32EncodedSecret,
       Counter counter,
       DigitsCount digits,
       SHA shaAlgo);
 
-  std::expected<std::string, Error> GetTotp(
+  std::expected<std::string, Error> getTotp(
       const char *base32EncodedSecret,
       DigitsCount digits,
       Period period,
       SHA shaAlgo=SHA::SHA1);
 
-  std::expected<std::string, Error> GetTotpAt(
+  std::expected<std::string, Error> getTotpAt(
       const char *base32EncodedSecret,
       long long time,
       DigitsCount digits=gDefaultDigits,
       Period period=gDefaultPeriod,
       SHA shaAlgo=SHA::SHA1);
 
-  std::expected<int64_t, Error>  TotpToInt(const std::string& otp);
+  std::expected<int64_t, Error>  totpToInt(const std::string& otp);
 }

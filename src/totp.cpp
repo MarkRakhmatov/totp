@@ -12,6 +12,7 @@
 #include <array>
 #include <expected>
 #include <string>
+#include <string_view>
 #include <sstream>
 #include <iomanip>
 #include <vector>
@@ -24,13 +25,14 @@ namespace totp
   constexpr int gMaxDigits = 10;
   constexpr size_t gByteSize = 8;
 
-  static void SecureMemzero(volatile uchar *ptr, size_t n) {
+  static void secureMemzero(volatile uchar *ptr, size_t n) {
     while ((n--) != 0U) {
       // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
       *ptr++ = 0;
     }
   }
-  constexpr void ReverseBytes(long long count, std::array<uchar, gByteSize>& cReverseByteOrder)
+
+  constexpr void reverseBytes(long long count, std::array<uchar, gByteSize>& cReverseByteOrder)
   #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   {
     for (size_t j = 0, i = gByteSize - 1; j < cReverseByteOrder.size(); j++, i--) {
@@ -48,42 +50,41 @@ namespace totp
   #Error "Unknown endianness"
   #endif
 
-  static std::string NormalizeSecret(const char *str);
+  static std::string normalizeSecret(std::string_view str);
 
-  static int Truncate(
+  static int truncate(
       const uchar *hmac,
       int digitsLength,
       WhmacHandle& handle);
 
-  static std::vector<uchar> ComputeHmac(
+  static std::vector<uchar> computeHmac(
       const char  *str,
       long long count,
       WhmacHandle& handle);
 
-  static std::string Finalize(
+  static std::string finalize(
       int digitsLength,
       int token);
 
-  static Error CheckPeriod(int period);
+  static Error checkPeriod(int period);
 
-  static Error CheckOtpLen(int digitsLength);
+  static Error checkOtpLen(int digitsLength);
 
-  static Error CheckAlgo(SHA algo);
+  static Error checkAlgo(SHA algo);
 
   constexpr int gModStep = 10ULL;
 
-
-  std::expected<std::string, Error> GetHOTP(
+  std::expected<std::string, Error> getHotp(
       const char *base32EncodedSecret,
       Counter counter,
       DigitsCount digits,
       SHA algo)
   {
-    if (CheckAlgo(algo) == Error::InvalidAlgo) {
+    if (checkAlgo(algo) == Error::InvalidAlgo) {
       return std::unexpected(Error::InvalidAlgo);
     }
 
-    if (CheckOtpLen (digits.value) == Error::InvalidDigits) {
+    if (checkOtpLen (digits.value) == Error::InvalidDigits) {
       return std::unexpected(Error::InvalidDigits);
     }
 
@@ -96,38 +97,37 @@ namespace totp
       return std::unexpected(Error::WhmacError);
     }
 
-    auto hmac = ComputeHmac (base32EncodedSecret, counter.value, handle);
+    auto hmac = computeHmac(base32EncodedSecret, counter.value, handle);
     if (hmac.empty()) {
       WhmacFreeHandle(handle);
       return std::unexpected(Error::WhmacError);
     }
 
     size_t const dlen = handle.dlen;
-    int const token = Truncate (hmac.data(), digits.value, handle);
+    int const token = truncate(hmac.data(), digits.value, handle);
     WhmacFreeHandle(handle);
 
-    SecureMemzero(hmac.data(), dlen);
+    secureMemzero(hmac.data(), dlen);
 
-    return Finalize (digits.value, token);
+    return finalize (digits.value, token);
   }
 
-
-  std::expected<std::string, Error> GetTotpAt(
+  std::expected<std::string, Error> getTotpAt(
       const char *secret,
       long long time,
       DigitsCount digits,
       Period period,
       SHA algo)
   {
-    if (CheckOtpLen(digits.value) == Error::InvalidDigits) {
+    if (checkOtpLen(digits.value) == Error::InvalidDigits) {
       return std::unexpected(Error::InvalidDigits);
     }
 
-    if (CheckPeriod (period.value) == Error::InvalidPeriod) {
+    if (checkPeriod (period.value) == Error::InvalidPeriod) {
       return std::unexpected(Error::InvalidPeriod);
     }
 
-    const auto& totp = GetHOTP(secret, Counter(time / period.value), digits, algo);
+    const auto& totp = getHotp(secret, Counter(time / period.value), digits, algo);
     if (!totp.has_value()) {
       return std::unexpected(totp.error());
     }
@@ -136,17 +136,17 @@ namespace totp
   }
 
 
-  std::expected<std::string, Error> GetTotp (
+  std::expected<std::string, Error> getTotp (
     const char *secret,
     DigitsCount digits,
     Period period,
     SHA algo)
   {
-    return GetTotpAt (secret, (long)time(nullptr), digits, period, algo);
+    return getTotpAt (secret, (long)time(nullptr), digits, period, algo);
   }
 
 
-  std::expected<int64_t, Error> TotpToInt(const std::string& otp)
+  std::expected<int64_t, Error> totpToInt(const std::string& otp)
   {
     size_t const len = otp.length();
     if (len < gMinDigits || len > gMaxDigits) {
@@ -157,26 +157,25 @@ namespace totp
   }
 
 
-  static std::string NormalizeSecret(const char *str)
+  static std::string normalizeSecret(std::string_view str)
   {
-    auto normStr = std::string(strlen (str), '\0');
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    for (int i = 0, j = 0; str[i] != '\0'; i++) {
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      if (int(str[i]) <= -1 || ((isalnum(str[i]) == 0) && str[i] != '='&& str[i] != ' ')) {
+    auto normStr = std::string{};
+    normStr.reserve(str.size());
+    for (auto ch : str) {
+      if (int(ch) <= -1 || ((::isalnum(ch) == 0) && ch != '=' && ch != ' ')) {
         return {};
       }
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      if (str[i] != ' ') {
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        normStr.at(j++) = ::islower(str[i]) != 0 ? static_cast<char>(toupper(str[i])) : str[i];
+      if (ch != ' ') {
+        normStr.push_back(
+            ::islower(ch) != 0 ? static_cast<char>(::toupper(ch)) : ch
+        );
       }
     }
     return normStr;
   }
 
 
-  static int Truncate(
+  static int truncate(
       const uchar *hmac,
       int digitsLength,
       WhmacHandle& handle)
@@ -200,12 +199,12 @@ namespace totp
   }
 
 
-  static std::vector<uchar>ComputeHmac(
+  static std::vector<uchar>computeHmac(
       const char *str,
       long long count,
       WhmacHandle& handle)
   {
-    auto normalizedSecret = NormalizeSecret(str);
+    auto normalizedSecret = normalizeSecret(str);
     if (normalizedSecret.empty()) {
       return {};
     }
@@ -217,13 +216,13 @@ namespace totp
     }
 
     std::array<uchar, gByteSize> cReverseByteOrder{};
-    ReverseBytes(count, cReverseByteOrder);
+    reverseBytes(count, cReverseByteOrder);
 
     auto err = WhmacSetKey (handle, secret.data(), secret.size());
     if (err != Error::NoError) {
       return {};
     }
-    WhmacUpdate (handle, cReverseByteOrder.data(), sizeof(cReverseByteOrder));
+    WhmacUpdate(handle, cReverseByteOrder.data(), sizeof(cReverseByteOrder));
 
     size_t const dlen = handle.dlen;
 
@@ -231,7 +230,7 @@ namespace totp
 
     ssize_t const flen = WhmacFinalize (handle, hmac.data(), dlen);
     if (flen < 0) {
-      SecureMemzero(hmac.data(), dlen);
+      secureMemzero(hmac.data(), dlen);
       return {};
     }
 
@@ -239,7 +238,7 @@ namespace totp
   }
 
 
-  static std::string Finalize(
+  static std::string finalize(
       int digitsLength,
       int tok)
   {
@@ -249,19 +248,19 @@ namespace totp
   }
 
 
-  static Error CheckPeriod(int period)
+  static Error checkPeriod(int period)
   {
     return (period <= gMinPeriod || period > gMaxPeriod) ? Error::InvalidPeriod : Error::Valid;
   }
 
 
-  static Error CheckOtpLen(int digitsLength)
+  static Error checkOtpLen(int digitsLength)
   {
     return (digitsLength < gMinDigits || digitsLength > gMaxDigits) ? Error::InvalidDigits : Error::Valid;
   }
 
 
-  static Error CheckAlgo(SHA algo)
+  static Error checkAlgo(SHA algo)
   {
     return (algo != SHA::SHA1 && algo != SHA::SHA256 && algo != SHA::SHA512) ? Error::InvalidAlgo : Error::Valid;
   }
