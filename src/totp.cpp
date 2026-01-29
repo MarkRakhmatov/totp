@@ -25,10 +25,9 @@ namespace totp
   constexpr int gMaxDigits = 10;
   constexpr size_t gByteSize = 8;
 
-  static void secureMemzero(volatile uchar *ptr, size_t n) {
-    while ((n--) != 0U) {
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      *ptr++ = 0;
+  static void secureMemzero(std::vector<uchar>& ptr) {
+    for(volatile uchar& ch: ptr) {
+      ch = 0;
     }
   }
 
@@ -53,12 +52,12 @@ namespace totp
   static std::string normalizeSecret(std::string_view str);
 
   static int truncate(
-      const uchar *hmac,
+      const std::vector<uchar>& hmac,
       int digitsLength,
       WhmacHandle& handle);
 
   static std::vector<uchar> computeHmac(
-      const char  *str,
+      std::string_view str,
       long long count,
       WhmacHandle& handle);
 
@@ -103,13 +102,12 @@ namespace totp
       return std::unexpected(Error::WhmacError);
     }
 
-    size_t const dlen = handle.dlen;
-    int const token = truncate(hmac.data(), digits.value, handle);
+    int const token = truncate(hmac, digits.value, handle);
     WhmacFreeHandle(handle);
 
-    secureMemzero(hmac.data(), dlen);
+    secureMemzero(hmac);
 
-    return finalize (digits.value, token);
+    return finalize(digits.value, token);
   }
 
   std::expected<std::string, Error> getTotpAt(
@@ -162,7 +160,7 @@ namespace totp
     auto normStr = std::string{};
     normStr.reserve(str.size());
     for (auto ch : str) {
-      if (int(ch) <= -1 || ((::isalnum(ch) == 0) && ch != '=' && ch != ' ')) {
+      if (int(ch) <= -1 || ((::isalnum(ch) == 0) && ch != '='&& ch != ' ')) {
         return {};
       }
       if (ch != ' ') {
@@ -176,7 +174,7 @@ namespace totp
 
 
   static int truncate(
-      const uchar *hmac,
+      const std::vector<uchar>& hmac,
       int digitsLength,
       WhmacHandle& handle)
   {
@@ -199,8 +197,8 @@ namespace totp
   }
 
 
-  static std::vector<uchar>computeHmac(
-      const char *str,
+  static std::vector<uchar> computeHmac(
+      std::string_view str,
       long long count,
       WhmacHandle& handle)
   {
@@ -218,7 +216,7 @@ namespace totp
     std::array<uchar, gByteSize> cReverseByteOrder{};
     reverseBytes(count, cReverseByteOrder);
 
-    auto err = WhmacSetKey (handle, secret.data(), secret.size());
+    auto err = whmacSetKey (handle, secret.data(), secret.size());
     if (err != Error::NoError) {
       return {};
     }
@@ -228,9 +226,9 @@ namespace totp
 
     auto hmac = std::vector<uchar>(dlen, ' ');
 
-    ssize_t const flen = WhmacFinalize (handle, hmac.data(), dlen);
+    ssize_t const flen = WhmacFinalize(handle, hmac.data(), dlen);
     if (flen < 0) {
-      secureMemzero(hmac.data(), dlen);
+      secureMemzero(hmac);
       return {};
     }
 
@@ -262,6 +260,6 @@ namespace totp
 
   static Error checkAlgo(SHA algo)
   {
-    return (algo != SHA::SHA1 && algo != SHA::SHA256 && algo != SHA::SHA512) ? Error::InvalidAlgo : Error::Valid;
+    return (algo < SHA::SHA1 || algo > SHA::SHA512) ? Error::InvalidAlgo : Error::Valid;
   }
 }

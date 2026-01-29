@@ -32,7 +32,7 @@ size_t WhmacGetlen(WhmacHandle& handle);
 
 void WhmacFreeHandle(WhmacHandle& handle);
 
-totp::Error WhmacSetKey(
+totp::Error whmacSetKey(
     WhmacHandle& handle,
     unsigned char *buffer,
     size_t buflen);

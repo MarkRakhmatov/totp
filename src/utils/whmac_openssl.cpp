@@ -52,7 +52,7 @@ void WhmacFreeHandle(WhmacHandle& handle)
   EVP_MAC_free(handle.mac);
 }
 
-totp::Error WhmacSetKey(WhmacHandle& handle, unsigned char* buffer, size_t buflen) {
+totp::Error whmacSetKey(WhmacHandle& handle, unsigned char* buffer, size_t buflen) {
   handle.ctx = EVP_MAC_CTX_new (handle.mac);
   if ((handle.ctx != nullptr) && (EVP_MAC_init (handle.ctx, buffer, buflen, handle.macParams.data()) == 0)) {
     ERR_print_errors_fp (stderr);
