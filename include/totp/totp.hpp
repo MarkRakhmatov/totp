@@ -63,7 +63,7 @@ namespace totp
    * \callgraph
    */
   std::expected<std::string, Error> getHotp(
-      const char   *base32EncodedSecret,
+      const char *base32EncodedSecret,
       Counter counter,
       DigitsCount digits,
       SHA shaAlgo);

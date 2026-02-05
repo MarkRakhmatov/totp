@@ -7,9 +7,9 @@
 #include <string>
 
 void totpEmptyOrValidString(const std::string& str, long seconds) {
-  auto totp = totp::GetTotpAt(str, seconds);
-  if (!totp.empty()) {
-    EXPECT_EQ(totp.size(), 6);
+  auto totp = totp::getTotpAt(str.c_str(), seconds);
+  if (totp.has_value()) {
+    EXPECT_EQ(totp.value().size(), 6);
   }
 }
 

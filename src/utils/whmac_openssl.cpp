@@ -11,11 +11,8 @@
 #include "totp/whmac.hpp"
 #include "totp/totp.hpp"
 
-using namespace std::string_literals;
-
-
-char* GetAlgoName(totp::SHA algo) {
-  static auto opensslAlgo = std::array<std::string, 3>{ "SHA1"s, "SHA256"s, "SHA512"s };
+char* getAlgoName(totp::SHA algo) {
+  static auto opensslAlgo = std::array<std::string, 3>{ "SHA1", "SHA256", "SHA512" };
   // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
   return opensslAlgo[static_cast<size_t>(algo)].data();
 }
@@ -38,7 +35,7 @@ WhmacHandle whmacGetHandle(totp::SHA algo)
 
   handle.macParams[0] = OSSL_PARAM_construct_utf8_string(
       "digest",
-      GetAlgoName(algo),
+      getAlgoName(algo),
       0
   );
   handle.macParams[1] = OSSL_PARAM_construct_end ();

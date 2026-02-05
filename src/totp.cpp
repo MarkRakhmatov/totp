@@ -35,7 +35,7 @@ namespace totp
   #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   {
     for (size_t j = 0, i = gByteSize - 1; j < cReverseByteOrder.size(); j++, i--) {
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, cppcoreguidelines-pro-bounds-pointer-arithmetic)
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic,cppcoreguidelines-pro-type-reinterpret-cast)
       cReverseByteOrder.at(i) = reinterpret_cast<uchar *>(&count)[j];
     }
   }
