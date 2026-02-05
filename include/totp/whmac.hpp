@@ -4,7 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <totp/Error.hpp>
+#include <totp/error.hpp>
 
 using ssize_t = long;
 
@@ -21,28 +21,28 @@ struct WhmacHandle
   totp::SHA algo;
   size_t dlen;
 
-  [[nodiscard]] bool Valid() const {
+  [[nodiscard]] bool valid() const {
     return mac != nullptr;
   }
 };
 
-WhmacHandle WhmacGetHandle(totp::SHA algo);
+WhmacHandle whmacGetHandle(totp::SHA algo);
 
-size_t WhmacGetlen(WhmacHandle& handle);
+size_t whmacGetlen(WhmacHandle& handle);
 
-void WhmacFreeHandle(WhmacHandle& handle);
+void whmacFreeHandle(WhmacHandle& handle);
 
 totp::Error whmacSetKey(
     WhmacHandle& handle,
     unsigned char *buffer,
     size_t buflen);
 
-void WhmacUpdate(
+void whmacUpdate(
     WhmacHandle& handle,
     unsigned char *buffer,
     size_t buflen);
 
-ssize_t WhmacFinalize(
+ssize_t whmacFinalize(
     WhmacHandle& handle,
     unsigned char *buffer,
     size_t buflen);

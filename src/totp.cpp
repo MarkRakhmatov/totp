@@ -1,5 +1,5 @@
 #include "totp/totp.hpp"
-#include "totp/Error.hpp"
+#include "totp/error.hpp"
 #include "totp/whmac.hpp"
 #include <base32/base32.hpp>
 
@@ -91,19 +91,19 @@ namespace totp
       return std::unexpected(Error::InvalidCounter);
     }
 
-    WhmacHandle handle = WhmacGetHandle(algo);
-    if (!handle.Valid()) {
+    WhmacHandle handle = whmacGetHandle(algo);
+    if (!handle.valid()) {
       return std::unexpected(Error::WhmacError);
     }
 
     auto hmac = computeHmac(base32EncodedSecret, counter.value, handle);
     if (hmac.empty()) {
-      WhmacFreeHandle(handle);
+      whmacFreeHandle(handle);
       return std::unexpected(Error::WhmacError);
     }
 
     int const token = truncate(hmac, digits.value, handle);
-    WhmacFreeHandle(handle);
+    whmacFreeHandle(handle);
 
     secureMemzero(hmac);
 
@@ -220,13 +220,13 @@ namespace totp
     if (err != Error::NoError) {
       return {};
     }
-    WhmacUpdate(handle, cReverseByteOrder.data(), sizeof(cReverseByteOrder));
+    whmacUpdate(handle, cReverseByteOrder.data(), sizeof(cReverseByteOrder));
 
     size_t const dlen = handle.dlen;
 
     auto hmac = std::vector<uchar>(dlen, ' ');
 
-    ssize_t const flen = WhmacFinalize(handle, hmac.data(), dlen);
+    ssize_t const flen = whmacFinalize(handle, hmac.data(), dlen);
     if (flen < 0) {
       secureMemzero(hmac);
       return {};

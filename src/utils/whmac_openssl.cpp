@@ -7,8 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
-#include <xstring>
-#include "totp/Error.hpp"
+#include "totp/error.hpp"
 #include "totp/whmac.hpp"
 #include "totp/totp.hpp"
 
@@ -21,7 +20,7 @@ char* GetAlgoName(totp::SHA algo) {
   return opensslAlgo[static_cast<size_t>(algo)].data();
 }
 
-WhmacHandle WhmacGetHandle(totp::SHA algo)
+WhmacHandle whmacGetHandle(totp::SHA algo)
 {
   WhmacHandle handle{};
 
@@ -47,7 +46,7 @@ WhmacHandle WhmacGetHandle(totp::SHA algo)
   return handle;
 }
 
-void WhmacFreeHandle(WhmacHandle& handle)
+void whmacFreeHandle(WhmacHandle& handle)
 {
   EVP_MAC_free(handle.mac);
 }
@@ -62,7 +61,7 @@ totp::Error whmacSetKey(WhmacHandle& handle, unsigned char* buffer, size_t bufle
   return totp::Error::NoError;
 }
 
-void WhmacUpdate(
+void whmacUpdate(
     WhmacHandle& handle,
     unsigned char *buffer,
     size_t buflen)
@@ -70,7 +69,7 @@ void WhmacUpdate(
   EVP_MAC_update (handle.ctx, buffer, buflen);
 }
 
-ssize_t WhmacFinalize(
+ssize_t whmacFinalize(
     WhmacHandle& handle,
     unsigned char *buffer,
     size_t buflen)

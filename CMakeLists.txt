@@ -10,6 +10,7 @@ project(
   totp
   VERSION 0.1.1
   LANGUAGES CXX
+  DESCRIPTION "C++ 23 Time-based One-Time Password library"
 )
 
 option(${PROJECT_NAME}_BUILD_TESTS "Build test" OFF)
@@ -35,7 +36,7 @@ endif()
 
 include(cmake/CPM.cmake)
 
-CPMAddPackage("gh:MarkRakhmatov/base32#776fc1b070d543827dc775cfa60b270e3f176acf") # v0.1.2
+CPMAddPackage("gh:MarkRakhmatov/base32#476f4d86c48cc7eb90a0a04487e22765766e687d") # v0.1.3
 
 CPMAddPackage(
   NAME openssl-cmake
