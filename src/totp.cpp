@@ -17,14 +17,16 @@
 #include <iomanip>
 #include <vector>
 
-namespace totp
-{
+namespace {
   constexpr int gMinPeriod = 0;
   constexpr int gMaxPeriod = 120;
   constexpr int gMinDigits = 4;
   constexpr int gMaxDigits = 10;
   constexpr size_t gByteSize = 8;
+}
 
+namespace totp
+{
   static void secureMemzero(std::vector<uchar>& ptr) {
     for(volatile uchar& ch: ptr) {
       ch = 0;
@@ -54,12 +56,12 @@ namespace totp
   static int truncate(
       const std::vector<uchar>& hmac,
       int digitsLength,
-      WhmacHandle& handle);
+      whmac::Handle& handle);
 
   static std::vector<uchar> computeHmac(
       std::string_view str,
       long long count,
-      WhmacHandle& handle);
+      whmac::Handle& handle);
 
   static std::string finalize(
       int digitsLength,
@@ -91,19 +93,17 @@ namespace totp
       return std::unexpected(Error::InvalidCounter);
     }
 
-    WhmacHandle handle = whmacGetHandle(algo);
-    if (!handle.valid()) {
+    auto handle = whmac::Handle(algo);
+    if (!handle.isValid()) {
       return std::unexpected(Error::WhmacError);
     }
 
     auto hmac = computeHmac(base32EncodedSecret, counter.value, handle);
     if (hmac.empty()) {
-      whmacFreeHandle(handle);
       return std::unexpected(Error::WhmacError);
     }
 
     int const token = truncate(hmac, digits.value, handle);
-    whmacFreeHandle(handle);
 
     secureMemzero(hmac);
 
@@ -176,7 +176,7 @@ namespace totp
   static int truncate(
       const std::vector<uchar>& hmac,
       int digitsLength,
-      WhmacHandle& handle)
+      whmac::Handle& handle)
   {
     // take the lower four bits of the last byte
     size_t const hlen = handle.dlen;
@@ -200,7 +200,7 @@ namespace totp
   static std::vector<uchar> computeHmac(
       std::string_view str,
       long long count,
-      WhmacHandle& handle)
+      whmac::Handle& handle)
   {
     auto normalizedSecret = normalizeSecret(str);
     if (normalizedSecret.empty()) {
@@ -216,17 +216,17 @@ namespace totp
     std::array<uchar, gByteSize> cReverseByteOrder{};
     reverseBytes(count, cReverseByteOrder);
 
-    auto err = whmacSetKey (handle, secret.data(), secret.size());
+    auto err = setKey (handle, secret.data(), secret.size());
     if (err != Error::NoError) {
       return {};
     }
-    whmacUpdate(handle, cReverseByteOrder.data(), sizeof(cReverseByteOrder));
+    update(handle, cReverseByteOrder.data(), sizeof(cReverseByteOrder));
 
     size_t const dlen = handle.dlen;
 
     auto hmac = std::vector<uchar>(dlen, ' ');
 
-    ssize_t const flen = whmacFinalize(handle, hmac.data(), dlen);
+    ssize_t const flen = finalize(handle, hmac.data(), dlen);
     if (flen < 0) {
       secureMemzero(hmac);
       return {};

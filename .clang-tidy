@@ -65,16 +65,16 @@ CheckOptions:
   - key: readability-identifier-naming.MacroDefinitionIgnoredRegexp
     value: '^[A-Z]+(_[A-Z]+)*_$'
   - key: readability-identifier-naming.PrivateMemberCase
-    value: camelBack
+    value: CamelCase
   - key: readability-identifier-naming.ProtectedMemberCase
-    value: camelBack
+    value: CamelCase
   - key: readability-identifier-naming.PublicMemberCase
     value: camelBack
-  - key: readability-identifier-naming.PrivateMemberSuffix
-    value: _
-  - key: readability-identifier-naming.ProtectedMemberSuffix
-    value: _
-  - key: readability-identifier-naming.PublicMemberSuffix
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: m
+  - key: readability-identifier-naming.ProtectedMemberPrefix
+    value: m
+  - key: readability-identifier-naming.PublicMemberPrefix
     value: ''
   - key: readability-identifier-naming.ParameterCase
     value: camelBack
