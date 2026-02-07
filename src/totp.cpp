@@ -53,26 +53,77 @@ namespace {
 
 namespace totp
 {
+  /*!
+   * \brief normalizeSecret
+   * \param str
+   * \return
+   *
+   * \callgraph
+   */
   static std::string normalizeSecret(std::string_view str);
-
+  /*!
+   * \brief truncate
+   * \param hmac
+   * \param digitsLength
+   * \param handle
+   * \return
+   *
+   * \callgraph
+   */
   static int truncate(
       const std::vector<uchar>& hmac,
       int digitsLength,
       whmac::Handle& handle);
-
+  /*!
+   * \brief computeHmac
+   * \param str
+   * \param count
+   * \param handle
+   * \return
+   *
+   * \callgraph
+   */
   static std::vector<uchar> computeHmac(
       std::string_view str,
       long long count,
       whmac::Handle& handle);
-
+  /*!
+   * \brief finalize
+   * \param digitsLength
+   * \param token
+   * \return
+   *
+   * \callgraph
+   */
   static std::string finalize(
       int digitsLength,
       int token);
 
+  /*!
+   * \brief checkPeriod
+   * \param period
+   * \return
+   *
+   * \callgraph
+   */
   static Error checkPeriod(int period);
 
+  /*!
+   * \brief checkOtpLen
+   * \param digitsLength
+   * \return
+   *
+   * \callgraph
+   */
   static Error checkOtpLen(int digitsLength);
 
+  /*!
+   * \brief checkAlgo
+   * \param algo
+   * \return
+   *
+   * \callgraph
+   */
   static Error checkAlgo(SHA algo);
 
   std::expected<std::string, Error> getHotp(
@@ -133,7 +184,6 @@ namespace totp
     return totp;
   }
 
-
   std::expected<std::string, Error> getTotp (
     const char *secret,
     DigitsCount digits,
@@ -142,7 +192,6 @@ namespace totp
   {
     return getTotpAt (secret, (long)time(nullptr), digits, period, algo);
   }
-
 
   std::expected<int64_t, Error> totpToInt(const std::string& otp)
   {
@@ -153,7 +202,6 @@ namespace totp
 
     return std::stoll(otp, nullptr);
   }
-
 
   static std::string normalizeSecret(std::string_view str)
   {
@@ -171,7 +219,6 @@ namespace totp
     }
     return normStr;
   }
-
 
   static int truncate(
       const std::vector<uchar>& hmac,
@@ -195,7 +242,6 @@ namespace totp
 
     return token;
   }
-
 
   static std::vector<uchar> computeHmac(
       std::string_view str,
@@ -235,7 +281,6 @@ namespace totp
     return hmac;
   }
 
-
   static std::string finalize(
       int digitsLength,
       int tok)
@@ -245,18 +290,15 @@ namespace totp
     return oss.str();
   }
 
-
   static Error checkPeriod(int period)
   {
     return (period <= gMinPeriod || period > gMaxPeriod) ? Error::InvalidPeriod : Error::Valid;
   }
 
-
   static Error checkOtpLen(int digitsLength)
   {
     return (digitsLength < gMinDigits || digitsLength > gMaxDigits) ? Error::InvalidDigits : Error::Valid;
   }
-
 
   static Error checkAlgo(SHA algo)
   {
