@@ -4,23 +4,13 @@
 #include "absl/debugging/symbolize.h"
 
 #include <totp/totp.hpp>
-#include <cstdlib>
+#include <string>
 
-TEST(FactorialFuzzTestSuite, factorial2) {
-  EXPECT_EQ(csl::factorial(2), 2);
+void totpEmptyOrValidString(const std::string& str, long seconds) {
+  auto totp = totp::getTotpAt(str.c_str(), seconds);
+  if (totp.has_value()) {
+    EXPECT_EQ(totp.value().size(), 6);
+  }
 }
 
-void factorialAlwaysGreaterThan0OrInvalid(int i) {
-  auto res = csl::factorial(i);
-  EXPECT_TRUE(res > 0 || res == -1 );
-}
-
-FUZZ_TEST(FactorialFuzzTestSuite, factorialAlwaysGreaterThan0OrInvalid);
-
-
-void factorialWithNegativeInput(int i) {
-  auto res = csl::factorial(-i);
-  EXPECT_TRUE(res > 0 || res == -1 );
-}
-
-FUZZ_TEST(FactorialFuzzTestSuite, factorialWithNegativeInput);
+FUZZ_TEST(totpFuzzTestSuite, totpEmptyOrValidString);

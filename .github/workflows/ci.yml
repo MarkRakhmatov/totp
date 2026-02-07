@@ -149,6 +149,8 @@ jobs:
         -D${{ env.PROJECT_NAME }}_BUILD_TESTS=ON
         -D${{ env.PROJECT_NAME }}_ENABLE_COVERAGE:BOOL=${{ matrix.build_type == 'Debug' }}
         -D${{ env.PROJECT_NAME }}_BUILD_FUZZ_TESTS:BOOL=${{ matrix.cpp_compiler == env.CLANG_COMPILER && matrix.build_type == 'Debug' }}
+        -D${{ env.PROJECT_NAME }}_DOC=${{ github.event_name == 'push' && github.ref_name == 'main' && matrix.cpp_compiler == env.CLANG_COMPILER && matrix.build_type == 'Release'}}
+        -DDOXYGEN_PROJECT_NUMBER=${{needs.prepare_new_version.outputs.version}}
         -S ${{ github.workspace }}
 
     - name: Build
@@ -213,7 +215,7 @@ jobs:
 
     - name: CPack
       if: matrix.package_generator != ''
-      working-directory: ./build
+      working-directory: ${{ github.workspace }}/build
       run: |
         cpack -C ${{matrix.build_type}} -G ${{matrix.package_generator}}
 
@@ -223,6 +225,13 @@ jobs:
       with:
         name: "package-${{matrix.os}}-${{matrix.cpp_compiler}}-${{matrix.generator}}"
         path: build/*-Release-*.*
+
+    - name: Deploy Pages
+      if: ${{ matrix.cpp_compiler == env.CLANG_COMPILER && matrix.build_type == 'Release' && github.ref_name == 'main' && github.event_name == 'push' }}
+      uses: ./.github/pages
+      with:
+        path: './build/doc/html'
+        artifact_name: "docs-${{matrix.os}}-${{matrix.cpp_compiler}}-${{matrix.generator}}"
 
   tag_and_release:
     name: Tag and release

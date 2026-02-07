@@ -10,13 +10,17 @@ project(
   totp
   VERSION 0.1.1
   LANGUAGES CXX
+  DESCRIPTION "C++ 23 Time-based One-Time Password library"
 )
 
 option(${PROJECT_NAME}_BUILD_TESTS "Build test" OFF)
+option(${PROJECT_NAME}_BUILD_FUZZ_TESTS "Build fuzz tests" OFF)
 option(${PROJECT_NAME}_ENABLE_CODE_ANALYSIS "Run static code analysis" OFF)
 option(${PROJECT_NAME}_ENABLE_COVERAGE "Code coverage" OFF)
 
-option(${PROJECT_NAME}_BUILD_FUZZ_TESTS "Build fuzz tests" OFF)
+option(${PROJECT_NAME}_DOC "Generate documentation using Doxygen" OFF)
+option(${PROJECT_NAME}_DOXYGEN_SEARCH_PATHS "Additional doxygen search paths" "")
+option(${PROJECT_NAME}_GRAPHVIZ_BIN_PATHS "Graphviz binary paths" "")
 
 # ---- Include guards ----
 
@@ -32,8 +36,18 @@ endif()
 
 include(cmake/CPM.cmake)
 
-# PackageProject.cmake will be used to make our target installable
-CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
+CPMAddPackage("gh:MarkRakhmatov/base32#476f4d86c48cc7eb90a0a04487e22765766e687d") # v0.1.3
+
+CPMAddPackage(
+  NAME openssl-cmake
+  GITHUB_REPOSITORY "jimmy-park/openssl-cmake"
+  GIT_TAG 3.6.0
+  OPTIONS "OPENSSL_CONFIGURE_OPTIONS no-shared\\\\;no-tests" "OPENSSL_CONFIGURE_VERBOSE ON"
+)
+
+# Set default visibility to hidden for all targets
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN YES)
 
 # ---- Add source files ----
 
@@ -62,7 +76,11 @@ if(NOT TEST_INSTALLED_VERSION)
 endif()
 
 # Link dependencies
-target_link_libraries(${PROJECT_NAME} PRIVATE)
+target_link_libraries(
+  ${PROJECT_NAME}
+  PRIVATE OpenSSL::SSL OpenSSL::Crypto
+  PUBLIC base32::base32
+)
 
 target_include_directories(
   ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
@@ -82,7 +100,7 @@ if(${PROJECT_NAME}_ENABLE_CODE_ANALYSIS)
       ${PROJECT_NAME}
       PROPERTIES
         CXX_CPPCHECK ${CPPCHECK_EXECUTABLE};
-        --std=c++${CMAKE_CXX_STANDARD};--enable=all;--error-exitcode=10;--suppressions-list=${PROJECT_SOURCE_DIR}/cppcheck.supp;
+        --std=c++${CMAKE_CXX_STANDARD};--enable=all;--Error-exitcode=10;--suppressions-list=${PROJECT_SOURCE_DIR}/cppcheck.supp;
     )
   endif()
 endif()
@@ -125,22 +143,118 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND ${PROJECT_NAME}_BUILD_FUZZ_TESTS)
   add_subdirectory(fuzz_test)
 endif()
 
+# Generate documentation
+if(${PROJECT_NAME}_DOC)
+  message(STATUS "${PROJECT_NAME}_DOC ON, generating documentation")
+
+  if(${PROJECT_NAME}_DOXYGEN_SEARCH_PATHS)
+    find_program(
+      DOXYGEN_EXECUTABLE doxygen NO_SYSTEM_ENVIRONMENT_PATH NO_DEFAULT_PATH
+      PATHS "${${PROJECT_NAME}_DOXYGEN_SEARCH_PATHS}"
+    )
+  endif()
+
+  if(NOT DOXYGEN_EXECUTABLE)
+    message(STATUS "DOXYGEN_EXECUTABLE not found in: ${${PROJECT_NAME}_DOXYGEN_SEARCH_PATHS}")
+    message(STATUS "Fallback to system paths search")
+    find_program(DOXYGEN_EXECUTABLE doxygen)
+
+    if(NOT DOXYGEN_EXECUTABLE)
+      message(WARNING "DOXYGEN_EXECUTABLE not found")
+      return()
+    endif()
+  endif()
+
+  message(STATUS "DOXYGEN_EXECUTABLE found: ${DOXYGEN_EXECUTABLE}")
+
+  execute_process(
+    COMMAND git describe --abbrev=0 --tags
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_LATEST_TAG
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+  message(STATUS "Latest git tag of ${PROJECT_NAME}: ${${PROJECT_NAME}_GIT_LATEST_TAG}")
+
+  include(FetchContent)
+  FetchContent_Declare(
+    doxygen-awesome-css
+    URL https://github.com/jothepro/doxygen-awesome-css/archive/refs/heads/main.zip
+  )
+  FetchContent_MakeAvailable(doxygen-awesome-css)
+
+  # Save the location the files were cloned into This allows us to get the path to
+  # doxygen-awesome.css
+  FetchContent_GetProperties(doxygen-awesome-css SOURCE_DIR AWESOME_CSS_DIR)
+
+  set(DOXYGEN_INPUT "${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include")
+  set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc)
+  set(DOXYGEN_DOT_PATH "${${PROJECT_NAME}_GRAPHVIZ_BIN_PATHS}")
+
+  set(DOXYFILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
+  set(DOXYFILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+  configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT} @ONLY)
+
+  # Generate the Doxyfile
+  add_custom_target(
+    doxydocs ALL # 'ALL' makes it part of the default build
+    COMMAND ${DOXYGEN_EXECUTABLE}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating doxygen docs"
+  )
+endif()
+
 # ---- Create an installable target ----
 # this allows users to install and find the library via `find_package()`.
 
-# the location where the project's version header will be placed should match the project's regular
-# header paths
-string(TOLOWER ${PROJECT_NAME}/version.h VERSION_HEADER_LOCATION)
+include(GNUInstallDirs)
 
-packageProject(
-  NAME ${PROJECT_NAME}
-  VERSION ${PROJECT_VERSION}
-  NAMESPACE ${PROJECT_NAME}
-  BINARY_DIR ${PROJECT_BINARY_DIR}
-  INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
-  INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
-  VERSION_HEADER "${VERSION_HEADER_LOCATION}"
-  COMPATIBILITY SameMajorVersion
+set(INSTALL_TARGETS ${PROJECT_NAME} base32)
+
+install(
+  TARGETS ${INSTALL_TARGETS}
+  DESTINATION lib
+  EXPORT ${PROJECT_NAME}Targets
+  INCLUDES
+  DESTINATION include/${PROJECT_NAME}
+)
+
+if(${PROJECT_NAME}_DOC)
+  install(
+    DIRECTORY ${DOXYGEN_OUTPUT_DIRECTORY}/
+    DESTINATION doc/
+    COMPONENT Documentation
+  )
+endif()
+
+install(DIRECTORY include/${PROJECT_NAME} DESTINATION include)
+
+install(
+  EXPORT ${PROJECT_NAME}Targets
+  NAMESPACE ${PROJECT_NAME}::
+  DESTINATION lib/cmake/${PROJECT_NAME}
+)
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+  INSTALL_DESTINATION "lib/cmake/${PROJECT_NAME}"
+  NO_SET_AND_CHECK_MACRO NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake COMPATIBILITY ExactVersion
+)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+              ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+
+export(
+  TARGETS ${INSTALL_TARGETS}
+  NAMESPACE ${PROJECT_NAME}::
+  FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake"
 )
 
 # ---- Package project ----

@@ -16,6 +16,8 @@ C++ TOTP library
 * fuzz testing using [fuzztest](https://github.com/google/fuzztest)
 * tooling to verify consistent commits format inspired by [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/)
 * autocreation of [version](https://semver.org/) tags in main branch based on commits
+* [Documentation](https://markrakhmatov.github.io/totp/) powered by [doxygen](https://www.doxygen.nl), [graphviz](https://www.graphviz.org/) and [doxygen-awesome-css
+](https://github.com/jothepro/doxygen-awesome-css)
 
 #### Commits format
 
