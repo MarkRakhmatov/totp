@@ -152,7 +152,7 @@ jobs:
         -D${{ env.PROJECT_NAME }}_BUILD_TESTS=ON
         -D${{ env.PROJECT_NAME }}_ENABLE_COVERAGE:BOOL=${{ matrix.build_type == 'Debug' }}
         -D${{ env.PROJECT_NAME }}_BUILD_FUZZ_TESTS:BOOL=${{ matrix.cpp_compiler == env.CLANG_COMPILER && matrix.build_type == 'Debug' }}
-        -D${{ env.PROJECT_NAME }}_DOC=${{ github.event_name == 'push' && github.ref_name == 'main' && matrix.cpp_compiler == env.CLANG_COMPILER && matrix.build_type == 'Release'}}
+        -D${{ env.PROJECT_NAME }}_DOC=${{ matrix.cpp_compiler == env.CLANG_COMPILER && matrix.build_type == 'Release' }}
         -DDOXYGEN_PROJECT_NUMBER=${{needs.prepare_new_version.outputs.version}}
         -S ${{ github.workspace }}
 
@@ -230,7 +230,7 @@ jobs:
         path: build/*-Release-*.*
 
     - name: Deploy Pages
-      if: ${{ matrix.cpp_compiler == env.CLANG_COMPILER && matrix.build_type == 'Release' && github.ref_name == 'main' && github.event_name == 'push' }}
+      if: ${{ matrix.cpp_compiler == env.CLANG_COMPILER && matrix.build_type == 'Release' }}
       uses: ./.github/pages
       with:
         path: './build/doc/html'
