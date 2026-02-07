@@ -32,6 +32,8 @@ jobs:
       contents: read
       actions: read
       pull-requests: write
+      pages: write
+      id-token: write
 
     name: ${{matrix.os}} ${{matrix.cpp_compiler}} ${{matrix.build_type}} ${{matrix.generator}} ${{matrix.package_generator}}
     runs-on: ${{ matrix.os }}
