@@ -23,34 +23,36 @@ namespace {
   constexpr int gMinDigits = 4;
   constexpr int gMaxDigits = 10;
   constexpr size_t gByteSize = 8;
-}
+  constexpr int gModStep = 10ULL;
+  using namespace totp;
 
-namespace totp
-{
-  static void secureMemzero(std::vector<uchar>& ptr) {
+  void secureMemzero(std::vector<uchar>& ptr) {
     for(volatile uchar& ch: ptr) {
       ch = 0;
     }
   }
 
   constexpr void reverseBytes(long long count, std::array<uchar, gByteSize>& cReverseByteOrder)
-  #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   {
     for (size_t j = 0, i = gByteSize - 1; j < cReverseByteOrder.size(); j++, i--) {
       // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic,cppcoreguidelines-pro-type-reinterpret-cast)
       cReverseByteOrder.at(i) = reinterpret_cast<uchar *>(&count)[j];
     }
   }
-  #elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
   {
     for (size_t j = 0; j < C_reverse_byte_order.size(); j++) {
       C_reverse_byte_order.at(j) = reinterpret_cast<uchar *>(&count)[j];
     }
   }
-  #else
-  #Error "Unknown endianness"
-  #endif
+#else
+#Error "Unknown endianness"
+#endif
+}
 
+namespace totp
+{
   static std::string normalizeSecret(std::string_view str);
 
   static int truncate(
@@ -73,8 +75,6 @@ namespace totp
 
   static Error checkAlgo(SHA algo);
 
-  constexpr int gModStep = 10ULL;
-
   std::expected<std::string, Error> getHotp(
       const char *base32EncodedSecret,
       Counter counter,
@@ -93,17 +93,17 @@ namespace totp
       return std::unexpected(Error::InvalidCounter);
     }
 
-    auto handle = whmac::Handle(algo);
-    if (!handle.isValid()) {
-      return std::unexpected(Error::WhmacError);
+    auto handle = whmac::Handle::make(algo);
+    if (!handle.has_value()) {
+      return std::unexpected(handle.error());
     }
 
-    auto hmac = computeHmac(base32EncodedSecret, counter.value, handle);
+    auto hmac = computeHmac(base32EncodedSecret, counter.value, handle.value());
     if (hmac.empty()) {
       return std::unexpected(Error::WhmacError);
     }
 
-    int const token = truncate(hmac, digits.value, handle);
+    int const token = truncate(hmac, digits.value, handle.value());
 
     secureMemzero(hmac);
 
@@ -179,7 +179,7 @@ namespace totp
       whmac::Handle& handle)
   {
     // take the lower four bits of the last byte
-    size_t const hlen = handle.dlen;
+    size_t const hlen = handle.getLen();
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     uint32_t const offset = hmac[hlen - 1] & 0x0fU;
 
@@ -216,17 +216,17 @@ namespace totp
     std::array<uchar, gByteSize> cReverseByteOrder{};
     reverseBytes(count, cReverseByteOrder);
 
-    auto err = setKey (handle, secret.data(), secret.size());
+    auto err = handle.setKey(secret.data(), secret.size());
     if (err != Error::NoError) {
       return {};
     }
-    update(handle, cReverseByteOrder.data(), sizeof(cReverseByteOrder));
+    handle.update(cReverseByteOrder.data(), sizeof(cReverseByteOrder));
 
-    size_t const dlen = handle.dlen;
+    size_t const dlen = handle.getLen();
 
     auto hmac = std::vector<uchar>(dlen, ' ');
 
-    ssize_t const flen = finalize(handle, hmac.data(), dlen);
+    ssize_t const flen = handle.finalize(hmac.data(), dlen);
     if (flen < 0) {
       secureMemzero(hmac);
       return {};

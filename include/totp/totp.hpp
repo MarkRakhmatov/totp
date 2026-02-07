@@ -38,6 +38,9 @@ namespace totp
      * \param value
      */
     explicit constexpr Strong(T value) : value(value) {}
+    /*!
+     * \brief raw value
+     */
     T value;
   };
 

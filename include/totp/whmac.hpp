@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <expected>
 #include <totp/error.hpp>
 
 using ssize_t = long;
@@ -19,63 +20,59 @@ namespace whmac {
   /*!
    * \brief The Handle class
    *
-   *
    */
   struct Handle
   {
     Handle() = default;
-    explicit Handle(totp::SHA algo);
+    [[nodiscard]] static std::expected<Handle, totp::Error> make(totp::SHA algo);
     Handle(Handle&) = delete;
     Handle& operator=(Handle&) = delete;
     Handle(Handle&& other) noexcept:
-      mac(other.mac),
-      macParams(other.macParams),
-      ctx(other.ctx),
-      algo(other.algo),
-      dlen(other.dlen){
+      mMac(other.mMac),
+      mMacParams(other.mMacParams),
+      mCtx(other.mCtx),
+      mAlgo(other.mAlgo),
+      mLen(other.mLen){
 
       other.invalidate();
     }
     Handle& operator=(Handle&& other)  noexcept {
-      mac = other.mac;
-      macParams = other.macParams;
-      ctx = other.ctx;
-      algo = other.algo;
-      dlen = other.dlen;
+      mMac = other.mMac;
+      mMacParams = other.mMacParams;
+      mCtx = other.mCtx;
+      mAlgo = other.mAlgo;
+      mLen = other.mLen;
 
       other.invalidate();
       return *this;
     }
     ~Handle();
     [[nodiscard]] bool isValid() const {
-      return mac != nullptr;
+      return mMac != nullptr;
     }
 
     void invalidate() {
-      mac = nullptr;
+      mMac = nullptr;
     }
 
-    EVP_MAC *mac{nullptr};
-    std::array<OSSL_PARAM, 4> macParams{};
-    EVP_MAC_CTX *ctx{nullptr};
-    totp::SHA algo{};
-    size_t dlen{0};
+    [[nodiscard]] size_t getLen() const;
+
+    totp::Error setKey(
+        unsigned char *buffer,
+        size_t buflen);
+
+    void update(
+        unsigned char *buffer,
+        size_t buflen);
+
+    ssize_t finalize(
+        unsigned char *buffer,
+        size_t buflen);
+  private:
+    EVP_MAC *mMac{nullptr};
+    std::array<OSSL_PARAM, 4> mMacParams{};
+    EVP_MAC_CTX *mCtx{nullptr};
+    totp::SHA mAlgo{};
+    size_t mLen{0};
   };
-
-  size_t getLen(Handle& handle);
-
-  totp::Error setKey(
-      Handle& handle,
-      unsigned char *buffer,
-      size_t buflen);
-
-  void update(
-      Handle& handle,
-      unsigned char *buffer,
-      size_t buflen);
-
-  ssize_t finalize(
-      Handle& handle,
-      unsigned char *buffer,
-      size_t buflen);
 }

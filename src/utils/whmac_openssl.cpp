@@ -6,6 +6,7 @@
 #include <array>
 #include <cstdio>
 #include <cstdlib>
+#include <expected>
 #include <string>
 #include "totp/error.hpp"
 #include "totp/whmac.hpp"
@@ -19,72 +20,62 @@ namespace {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
     return opensslAlgo[static_cast<size_t>(algo)].data();
   }
+}
 
-  Handle newHandle(totp::SHA algo)
-  {
-    Handle handle{};
-
+namespace whmac {
+  std::expected<Handle, totp::Error> Handle::make(totp::SHA algo) {
     if (algo > totp::SHA::SHA512) {
-      return handle;
+      return std::unexpected(totp::Error::InvalidAlgo);
     }
 
     EVP_MAC *mac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
     if (mac == nullptr) {
-      return handle;
+      return std::unexpected(totp::Error::WhmacError);
     }
 
-    handle.mac = mac;
-    handle.algo = algo;
+    Handle handle{};
+    handle.mMac = mac;
+    handle.mAlgo = algo;
 
-    handle.macParams[0] = OSSL_PARAM_construct_utf8_string(
+    handle.mMacParams[0] = OSSL_PARAM_construct_utf8_string(
         "digest",
         getAlgoName(algo),
         0
         );
-    handle.macParams[1] = OSSL_PARAM_construct_end();
-
+    handle.mMacParams[1] = OSSL_PARAM_construct_end();
     return handle;
   }
 
-  void freeHandle(Handle& handle)
-  {
-    EVP_MAC_free(handle.mac);
-  }
-}
-
-namespace whmac {
-  Handle::Handle(totp::SHA algo) {
-    *this = newHandle(algo);
-  }
-
   Handle::~Handle(){
-    freeHandle(*this);
+    EVP_MAC_free(mMac);
   }
 
-  totp::Error setKey(Handle& handle, unsigned char* buffer, size_t buflen) {
-    handle.ctx = EVP_MAC_CTX_new (handle.mac);
-    if ((handle.ctx != nullptr) && (EVP_MAC_init (handle.ctx, buffer, buflen, handle.macParams.data()) == 0)) {
+  size_t Handle::getLen() const {
+    return mLen;
+  }
+
+  totp::Error Handle::setKey(unsigned char* buffer, size_t buflen) {
+    mCtx = EVP_MAC_CTX_new(mMac);
+    if ((mCtx != nullptr) && (EVP_MAC_init (mCtx, buffer, buflen, mMacParams.data()) == 0)) {
       ERR_print_errors_fp(stderr);
       return totp::Error::InvalidAlgo;
     }
-    handle.dlen = EVP_MAC_CTX_get_mac_size (handle.ctx);
+    mLen = EVP_MAC_CTX_get_mac_size (mCtx);
     return totp::Error::NoError;
   }
 
-  void update(
-      Handle& handle,
+  void Handle::update(
       unsigned char *buffer,
       size_t buflen)
   {
-    EVP_MAC_update (handle.ctx, buffer, buflen);
+    EVP_MAC_update (mCtx, buffer, buflen);
   }
 
-  ssize_t finalize(
-      Handle& handle,
+  ssize_t Handle::finalize(
       unsigned char *buffer,
       size_t buflen)
   {
-    size_t dlen = EVP_MAC_CTX_get_mac_size (handle.ctx);
+    size_t dlen = EVP_MAC_CTX_get_mac_size (mCtx);
     if (buffer == nullptr) {
       return ssize_t(dlen);
     }
@@ -93,9 +84,9 @@ namespace whmac {
       return static_cast<ssize_t>(totp::Error::MemoryAllocationError);
     }
 
-    EVP_MAC_final (handle.ctx, buffer, &dlen, buflen);
-    EVP_MAC_CTX_free (handle.ctx);
-    handle.ctx = nullptr;
+    EVP_MAC_final (mCtx, buffer, &dlen, buflen);
+    EVP_MAC_CTX_free (mCtx);
+    mCtx = nullptr;
 
     return ssize_t(dlen);
   }
