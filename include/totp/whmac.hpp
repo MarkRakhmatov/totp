@@ -24,6 +24,13 @@ namespace whmac {
   struct Handle
   {
     Handle() = default;
+    /*!
+     * \brief make
+     * \param algo
+     * \return
+     *
+     * \callgraph
+     */
     [[nodiscard]] static std::expected<Handle, totp::Error> make(totp::SHA algo);
     Handle(Handle&) = delete;
     Handle& operator=(Handle&) = delete;
@@ -47,24 +54,47 @@ namespace whmac {
       return *this;
     }
     ~Handle();
-    [[nodiscard]] bool isValid() const {
-      return mMac != nullptr;
-    }
 
     void invalidate() {
       mMac = nullptr;
     }
-
+    /*!
+     * \brief getLen
+     * \return
+     *
+     * \callgraph
+     */
     [[nodiscard]] size_t getLen() const;
 
+    /*!
+     * \brief setKey
+     * \param buffer
+     * \param buflen
+     * \return
+     *
+     * \callgraph
+     */
     totp::Error setKey(
         unsigned char *buffer,
         size_t buflen);
-
+    /*!
+     * \brief update
+     * \param buffer
+     * \param buflen
+     *
+     * \callgraph
+     */
     void update(
         unsigned char *buffer,
         size_t buflen);
-
+    /*!
+     * \brief finalize
+     * \param buffer
+     * \param buflen
+     * \return
+     *
+     * \callgraph
+     */
     ssize_t finalize(
         unsigned char *buffer,
         size_t buflen);

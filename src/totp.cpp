@@ -53,27 +53,161 @@ namespace {
 
 namespace totp
 {
-  static std::string normalizeSecret(std::string_view str);
-
-  static int truncate(
+  /*!
+   * \brief truncate
+   * \param hmac
+   * \param digitsLength
+   * \param handle
+   * \return
+   *
+   * \callgraph
+   */
+  int truncate(
       const std::vector<uchar>& hmac,
       int digitsLength,
-      whmac::Handle& handle);
+      whmac::Handle& handle)
+  {
+    // take the lower four bits of the last byte
+    size_t const hlen = handle.getLen();
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    uint32_t const offset = hmac[hlen - 1] & 0x0fU;
 
-  static std::vector<uchar> computeHmac(
+            // Starting from the offset, take the successive 4 bytes while stripping the topmost bit to prevent it being handled as a signed integer
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    uint32_t const binCode = ((uint32_t)(hmac[offset] & 0x7fU) << 24U) | ((uint32_t)(hmac[offset + 1] & 0xffU) << 16U) | ((uint32_t)(hmac[offset + 2] & 0xffU) << 8U) | ((uint32_t)(hmac[offset + 3U] & 0xffU));
+
+    uint64_t mod = 1;
+    for (int i = 0; i < digitsLength; ++i) {
+      mod *= gModStep;
+    }
+    int const token = (int)(((uint64_t)binCode) % mod);
+
+    return token;
+  }
+
+  /*!
+   * \brief normalizeSecret
+   * \param str
+   * \return
+   *
+   * \callgraph
+   */
+  std::string normalizeSecret(std::string_view str)
+  {
+    auto normStr = std::string{};
+    normStr.reserve(str.size());
+    for (auto ch : str) {
+      if (int(ch) <= -1 || ((::isalnum(ch) == 0) && ch != '='&& ch != ' ')) {
+        return {};
+      }
+      if (ch != ' ') {
+        normStr.push_back(
+            ::islower(ch) != 0 ? static_cast<char>(::toupper(ch)) : ch
+            );
+      }
+    }
+    return normStr;
+  }
+
+  /*!
+   * \brief computeHmac
+   * \param str
+   * \param count
+   * \param handle
+   * \return
+   *
+   * \callgraph
+   */
+  std::vector<uchar> computeHmac(
       std::string_view str,
       long long count,
-      whmac::Handle& handle);
+      whmac::Handle& handle)
+  {
+    auto normalizedSecret = normalizeSecret(str);
+    if (normalizedSecret.empty()) {
+      return {};
+    }
 
-  static std::string finalize(
+    base32::Error b32Err{};
+    auto secret = base32::decode(normalizedSecret, b32Err);
+    if (secret.empty()) {
+      return {};
+    }
+
+    std::array<uchar, gByteSize> cReverseByteOrder{};
+    reverseBytes(count, cReverseByteOrder);
+
+    auto err = handle.setKey(secret.data(), secret.size());
+    if (err != Error::NoError) {
+      return {};
+    }
+    handle.update(cReverseByteOrder.data(), sizeof(cReverseByteOrder));
+
+    size_t const dlen = handle.getLen();
+
+    auto hmac = std::vector<uchar>(dlen, ' ');
+
+    ssize_t const flen = handle.finalize(hmac.data(), dlen);
+    if (flen < 0) {
+      secureMemzero(hmac);
+      return {};
+    }
+
+    return hmac;
+  }
+
+  /*!
+   * \brief finalize
+   * \param digitsLength
+   * \param tok
+   * \return
+   *
+   * \callgraph
+   */
+  std::string finalize(
       int digitsLength,
-      int token);
+      int tok)
+  {
+    std::ostringstream oss;
+    oss << std::setw(digitsLength) << std::setfill('0') << tok;
+    return oss.str();
+  }
 
-  static Error checkPeriod(int period);
+  /*!
+   * \brief checkPeriod
+   * \param period
+   * \return
+   *
+   * \callgraph
+   */
+  Error checkPeriod(int period)
+  {
+    return (period <= gMinPeriod || period > gMaxPeriod) ? Error::InvalidPeriod : Error::Valid;
+  }
 
-  static Error checkOtpLen(int digitsLength);
+  /*!
+   * \brief checkOtpLen
+   * \param digitsLength
+   * \return
+   *
+   * \callgraph
+   */
+  Error checkOtpLen(int digitsLength)
+  {
+    return (digitsLength < gMinDigits || digitsLength > gMaxDigits) ? Error::InvalidDigits : Error::Valid;
+  }
 
-  static Error checkAlgo(SHA algo);
+  /*!
+   * \brief checkAlgo
+   * \param algo
+   * \return
+   *
+   * \callgraph
+   */
+  Error checkAlgo(SHA algo)
+  {
+    return (algo < SHA::SHA1 || algo > SHA::SHA512) ? Error::InvalidAlgo : Error::Valid;
+  }
 
   std::expected<std::string, Error> getHotp(
       const char *base32EncodedSecret,
@@ -133,7 +267,6 @@ namespace totp
     return totp;
   }
 
-
   std::expected<std::string, Error> getTotp (
     const char *secret,
     DigitsCount digits,
@@ -143,7 +276,6 @@ namespace totp
     return getTotpAt (secret, (long)time(nullptr), digits, period, algo);
   }
 
-
   std::expected<int64_t, Error> totpToInt(const std::string& otp)
   {
     size_t const len = otp.length();
@@ -152,114 +284,5 @@ namespace totp
     }
 
     return std::stoll(otp, nullptr);
-  }
-
-
-  static std::string normalizeSecret(std::string_view str)
-  {
-    auto normStr = std::string{};
-    normStr.reserve(str.size());
-    for (auto ch : str) {
-      if (int(ch) <= -1 || ((::isalnum(ch) == 0) && ch != '='&& ch != ' ')) {
-        return {};
-      }
-      if (ch != ' ') {
-        normStr.push_back(
-            ::islower(ch) != 0 ? static_cast<char>(::toupper(ch)) : ch
-        );
-      }
-    }
-    return normStr;
-  }
-
-
-  static int truncate(
-      const std::vector<uchar>& hmac,
-      int digitsLength,
-      whmac::Handle& handle)
-  {
-    // take the lower four bits of the last byte
-    size_t const hlen = handle.getLen();
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    uint32_t const offset = hmac[hlen - 1] & 0x0fU;
-
-    // Starting from the offset, take the successive 4 bytes while stripping the topmost bit to prevent it being handled as a signed integer
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    uint32_t const binCode = ((uint32_t)(hmac[offset] & 0x7fU) << 24U) | ((uint32_t)(hmac[offset + 1] & 0xffU) << 16U) | ((uint32_t)(hmac[offset + 2] & 0xffU) << 8U) | ((uint32_t)(hmac[offset + 3U] & 0xffU));
-
-    uint64_t mod = 1;
-    for (int i = 0; i < digitsLength; ++i) {
-      mod *= gModStep;
-    }
-    int const token = (int)(((uint64_t)binCode) % mod);
-
-    return token;
-  }
-
-
-  static std::vector<uchar> computeHmac(
-      std::string_view str,
-      long long count,
-      whmac::Handle& handle)
-  {
-    auto normalizedSecret = normalizeSecret(str);
-    if (normalizedSecret.empty()) {
-      return {};
-    }
-
-    base32::Error b32Err{};
-    auto secret = base32::decode(normalizedSecret, b32Err);
-    if (secret.empty()) {
-      return {};
-    }
-
-    std::array<uchar, gByteSize> cReverseByteOrder{};
-    reverseBytes(count, cReverseByteOrder);
-
-    auto err = handle.setKey(secret.data(), secret.size());
-    if (err != Error::NoError) {
-      return {};
-    }
-    handle.update(cReverseByteOrder.data(), sizeof(cReverseByteOrder));
-
-    size_t const dlen = handle.getLen();
-
-    auto hmac = std::vector<uchar>(dlen, ' ');
-
-    ssize_t const flen = handle.finalize(hmac.data(), dlen);
-    if (flen < 0) {
-      secureMemzero(hmac);
-      return {};
-    }
-
-    return hmac;
-  }
-
-
-  static std::string finalize(
-      int digitsLength,
-      int tok)
-  {
-    std::ostringstream oss;
-    oss << std::setw(digitsLength) << std::setfill('0') << tok;
-    return oss.str();
-  }
-
-
-  static Error checkPeriod(int period)
-  {
-    return (period <= gMinPeriod || period > gMaxPeriod) ? Error::InvalidPeriod : Error::Valid;
-  }
-
-
-  static Error checkOtpLen(int digitsLength)
-  {
-    return (digitsLength < gMinDigits || digitsLength > gMaxDigits) ? Error::InvalidDigits : Error::Valid;
-  }
-
-
-  static Error checkAlgo(SHA algo)
-  {
-    return (algo < SHA::SHA1 || algo > SHA::SHA512) ? Error::InvalidAlgo : Error::Valid;
   }
 }
